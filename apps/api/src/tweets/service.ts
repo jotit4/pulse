@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../db";
 import { likes, tweets, users } from "../db/schema";
+import { tweetBus } from "../events/bus";
 import { HttpError } from "../http/errors";
 
 const uuidSchema = z.string().uuid();
@@ -79,6 +80,11 @@ export async function createTweet(
     .values({ authorId, content })
     .returning({ id: tweets.id });
   const view = await getTweetViewById(db, created!.id, authorId);
+
+  // Publicamos el evento al bus para que los viewers en tiempo real lo reciban.
+  // El authorId viaja internamente para filtrar visibilidad; no sale por la API.
+  tweetBus.publishTweet({ tweet: view!, authorId });
+
   return view!;
 }
 

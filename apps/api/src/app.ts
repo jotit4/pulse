@@ -6,6 +6,7 @@ import { createAuthRoutes } from "./auth/routes";
 import type { AppDeps } from "./config";
 import { HttpError } from "./http/errors";
 import type { AppEnv } from "./http/types";
+import { createRealtimeRoutes } from "./realtime/routes";
 import { health } from "./routes/health";
 import { createSocialRoutes } from "./social/routes";
 import { createTimelineRoutes } from "./timeline/routes";
@@ -31,6 +32,7 @@ export function createApp(deps: AppDeps) {
   app.route("/timeline", createTimelineRoutes(deps));
   app.route("/users", createUserRoutes(deps));
   app.route("/", createSocialRoutes(deps));
+  app.route("/realtime", createRealtimeRoutes(deps));
 
   app.onError((err, c) => {
     if (err instanceof HttpError) {
