@@ -1,23 +1,26 @@
-import { describe, expect, it } from "vitest";
-import { createApp } from "./app";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createTestApp, type TestApp } from "../test/helpers/app";
 
 describe("GET /health", () => {
-  it("responde 200 con el estado del servicio", async () => {
-    const app = createApp();
+  let ctx: TestApp;
 
-    const res = await app.request("/health");
+  beforeEach(async () => {
+    ctx = await createTestApp();
+  });
+
+  afterEach(async () => {
+    await ctx.close();
+  });
+
+  it("responde 200 con el estado del servicio", async () => {
+    const res = await ctx.app.request("/health");
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({
-      status: "ok",
-      service: "pulse-api",
-    });
+    await expect(res.json()).resolves.toEqual({ status: "ok", service: "pulse-api" });
   });
 
   it("devuelve 404 en una ruta inexistente", async () => {
-    const app = createApp();
-
-    const res = await app.request("/no-existe");
+    const res = await ctx.app.request("/no-existe");
 
     expect(res.status).toBe(404);
   });
