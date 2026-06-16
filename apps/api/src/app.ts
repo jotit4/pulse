@@ -10,6 +10,7 @@ import { health } from "./routes/health";
 import { createSocialRoutes } from "./social/routes";
 import { createTimelineRoutes } from "./timeline/routes";
 import { createTweetRoutes } from "./tweets/routes";
+import { createUserRoutes } from "./users/routes";
 
 /**
  * Factory de la app Hono. Recibe sus dependencias (db + config) por inyección
@@ -28,6 +29,7 @@ export function createApp(deps: AppDeps) {
   app.route("/auth", createAuthRoutes(deps));
   app.route("/tweets", createTweetRoutes(deps));
   app.route("/timeline", createTimelineRoutes(deps));
+  app.route("/users", createUserRoutes(deps));
   app.route("/", createSocialRoutes(deps));
 
   app.onError((err, c) => {
