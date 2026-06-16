@@ -5,14 +5,12 @@ import { sessions, users, type User } from "../db/schema";
 import { hashPassword, verifyPassword } from "./password";
 import { generateSessionToken, hashToken } from "./tokens";
 import type { PublicUser } from "@pulse/shared";
+import { HttpError } from "../http/errors";
 
 /** Error de negocio de auth con el status HTTP que le corresponde. */
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    public readonly status: 400 | 401 | 409,
-  ) {
-    super(message);
+export class AuthError extends HttpError {
+  constructor(message: string, status: 400 | 401 | 409) {
+    super(message, status);
     this.name = "AuthError";
   }
 }

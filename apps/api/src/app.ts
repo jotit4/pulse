@@ -3,10 +3,11 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { createAuthRoutes } from "./auth/routes";
-import { AuthError } from "./auth/service";
 import type { AppDeps } from "./config";
+import { HttpError } from "./http/errors";
 import type { AppEnv } from "./http/types";
 import { health } from "./routes/health";
+import { createTweetRoutes } from "./tweets/routes";
 
 /**
  * Factory de la app Hono. Recibe sus dependencias (db + config) por inyección
@@ -23,10 +24,11 @@ export function createApp(deps: AppDeps) {
 
   app.route("/health", health);
   app.route("/auth", createAuthRoutes(deps));
+  app.route("/tweets", createTweetRoutes(deps));
 
   app.onError((err, c) => {
-    if (err instanceof AuthError) {
-      return c.json({ error: err.message }, err.status);
+    if (err instanceof HttpError) {
+      return c.json({ error: err.message }, err.status as 400);
     }
     if (err instanceof HTTPException) {
       return err.getResponse();
