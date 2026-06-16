@@ -26,7 +26,7 @@ export function configFromEnv(env: Env): AppConfig {
     auth: {
       cookieName: env.SESSION_COOKIE_NAME,
       sessionTtlDays: env.SESSION_TTL_DAYS,
-      secureCookie: env.NODE_ENV === "production",
+      secureCookie: env.SECURE_COOKIE ?? env.NODE_ENV === "production",
       sameSite: "Lax",
     },
   };

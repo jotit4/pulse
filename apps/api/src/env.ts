@@ -13,6 +13,13 @@ const EnvSchema = z.object({
   WEB_ORIGIN: z.string().url().default("http://localhost:5173"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
   SESSION_COOKIE_NAME: z.string().min(1).default("pulse_session"),
+  // Override explícito del flag `Secure` de la cookie. Si no se define, se deriva
+  // de NODE_ENV. Permite correr en modo producción detrás de HTTP plano (p. ej.
+  // el docker-compose de demo sirviendo por http://localhost) sin romper el login.
+  SECURE_COOKIE: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

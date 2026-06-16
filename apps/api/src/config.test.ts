@@ -42,6 +42,16 @@ describe("configFromEnv", () => {
     expect(config.auth.secureCookie).toBe(false);
   });
 
+  it("SECURE_COOKIE override fuerza false aún en production (HTTP detrás de proxy)", () => {
+    const config = configFromEnv({ ...baseEnv, NODE_ENV: "production", SECURE_COOKIE: false });
+    expect(config.auth.secureCookie).toBe(false);
+  });
+
+  it("SECURE_COOKIE override fuerza true aún en development", () => {
+    const config = configFromEnv({ ...baseEnv, NODE_ENV: "development", SECURE_COOKIE: true });
+    expect(config.auth.secureCookie).toBe(true);
+  });
+
   it("sameSite siempre es Lax", () => {
     const config = configFromEnv(baseEnv);
     expect(config.auth.sameSite).toBe("Lax");
