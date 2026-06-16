@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .dockerignore — excluye archivos innecesarios del contexto de build de Docker
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Módulos de Node (se instalan dentro de la imagen)
+node_modules
+**/node_modules
+
+# Carpetas de distribución (se regeneran en el build)
+dist
+**/dist
+
+# Control de versiones
+.git
+.gitignore
+
+# Cobertura de tests
+**/coverage
+
+# Logs y archivos temporales
+*.log
+**/*.log
+.npm
+
+# Archivos de entorno (se pasan como variables al compose)
+.env
+.env.local
+.env.*.local
+
+# Configuración local del IDE / herramientas
+.vscode
+.idea
+*.swp
+*.swo
+
+# Directorios de caché de herramientas
+.turbo
+.cache
+
+# Playwright / tests E2E
+**/playwright-report
+**/test-results

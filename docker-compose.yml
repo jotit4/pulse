@@ -1,0 +1,103 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — Pulse: levanta DB + API + Web con un solo comando
+#
+# Uso:
+#   docker compose up --build          # primera vez (construye imágenes)
+#   docker compose up                  # veces siguientes (reutiliza imágenes)
+#   docker compose down -v             # baja y elimina el volumen de postgres
+#
+# URLs:
+#   Frontend → http://localhost:8080
+#   API      → http://localhost:3001   (o vía frontend en /api/)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── Base de datos PostgreSQL ────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+      POSTGRES_DB: pulse
+    volumes:
+      # Volumen nombrado para persistir los datos entre reinicios
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready verifica que Postgres acepte conexiones antes de que
+      # el servicio api intente conectarse
+      test: ["CMD-SHELL", "pg_isready -U pulse -d pulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - pulse_net
+
+  # ── API (Hono + Drizzle) ────────────────────────────────────────────────────
+  api:
+    build:
+      # El contexto es la RAÍZ del monorepo para poder acceder a packages/shared
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy # espera a que Postgres esté listo
+    environment:
+      NODE_ENV: production
+      # URL interna de Docker: el host "db" resuelve al contenedor postgres
+      DATABASE_URL: postgresql://pulse:pulse@db:5432/pulse
+      API_PORT: 3001
+      # WEB_ORIGIN debe coincidir con la URL pública del frontend
+      WEB_ORIGIN: http://localhost:8080
+      SESSION_TTL_DAYS: 30
+      SESSION_COOKIE_NAME: pulse_session
+      # La demo se sirve por HTTP plano (localhost:8080); desactivamos el flag
+      # Secure de la cookie para que el login persista. Detrás de HTTPS, quitar esto.
+      SECURE_COOKIE: "false"
+      # Si SEED_ON_START=true el entrypoint ejecuta db:seed al arrancar
+      SEED_ON_START: "true"
+    ports:
+      # Expone la API en el host para debugging directo (opcional en prod)
+      - "3001:3001"
+    healthcheck:
+      # Verifica que la API responda en el endpoint /health ya implementado
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - pulse_net
+
+  # ── Frontend (React SPA servido por nginx) ──────────────────────────────────
+  web:
+    build:
+      # El contexto también es la raíz (por packages/shared y el lockfile)
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # VITE_API_BASE=/api hace que el cliente use rutas relativas al mismo origen;
+        # nginx proxea /api/* → http://api:3001/ dentro de la red de Docker
+        VITE_API_BASE: /api
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy # espera a que la API esté lista
+    ports:
+      # Puerto público del frontend
+      - "8080:80"
+    networks:
+      - pulse_net
+
+# ── Redes ────────────────────────────────────────────────────────────────────
+networks:
+  pulse_net:
+    driver: bridge
+
+# ── Volúmenes ────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    # Volumen nombrado gestionado por Docker; persiste entre `docker compose down`
+    # Para eliminar los datos: `docker compose down -v`
