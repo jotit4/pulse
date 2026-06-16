@@ -7,6 +7,7 @@ import type { AppDeps } from "./config";
 import { HttpError } from "./http/errors";
 import type { AppEnv } from "./http/types";
 import { health } from "./routes/health";
+import { createSocialRoutes } from "./social/routes";
 import { createTweetRoutes } from "./tweets/routes";
 
 /**
@@ -25,6 +26,7 @@ export function createApp(deps: AppDeps) {
   app.route("/health", health);
   app.route("/auth", createAuthRoutes(deps));
   app.route("/tweets", createTweetRoutes(deps));
+  app.route("/", createSocialRoutes(deps));
 
   app.onError((err, c) => {
     if (err instanceof HttpError) {
