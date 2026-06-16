@@ -10,6 +10,9 @@ import type {
 
 const BASE = (import.meta.env["VITE_API_BASE"] as string | undefined) ?? "/api";
 
+/** Base del API (misma que usa el cliente HTTP), p. ej. para abrir un EventSource. */
+export const API_BASE = BASE;
+
 /** Error tipado de la API: incluye el status HTTP. */
 export class ApiError extends Error {
   constructor(
@@ -54,11 +57,9 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 // ---------------------------------------------------------------------------
 
 export const authApi = {
-  register: (input: RegisterInput) =>
-    req<{ user: PublicUser }>("POST", "/auth/register", input),
+  register: (input: RegisterInput) => req<{ user: PublicUser }>("POST", "/auth/register", input),
 
-  login: (input: LoginInput) =>
-    req<{ user: PublicUser }>("POST", "/auth/login", input),
+  login: (input: LoginInput) => req<{ user: PublicUser }>("POST", "/auth/login", input),
 
   logout: () => req<{ ok: boolean }>("POST", "/auth/logout"),
 
@@ -70,8 +71,7 @@ export const authApi = {
 // ---------------------------------------------------------------------------
 
 export const tweetsApi = {
-  create: (input: CreateTweetInput) =>
-    req<{ tweet: TweetView }>("POST", "/tweets", input),
+  create: (input: CreateTweetInput) => req<{ tweet: TweetView }>("POST", "/tweets", input),
 
   delete: (id: string) => req<{ ok: boolean }>("DELETE", `/tweets/${id}`),
 };
@@ -99,16 +99,10 @@ export const socialApi = {
     req<{ likesCount: number; likedByMe: boolean }>("DELETE", `/tweets/${tweetId}/like`),
 
   follow: (username: string) =>
-    req<{ following: boolean; followersCount: number }>(
-      "POST",
-      `/users/${username}/follow`,
-    ),
+    req<{ following: boolean; followersCount: number }>("POST", `/users/${username}/follow`),
 
   unfollow: (username: string) =>
-    req<{ following: boolean; followersCount: number }>(
-      "DELETE",
-      `/users/${username}/follow`,
-    ),
+    req<{ following: boolean; followersCount: number }>("DELETE", `/users/${username}/follow`),
 
   followers: (username: string) =>
     req<{ users: PublicUser[] }>("GET", `/users/${username}/followers`),
@@ -128,8 +122,7 @@ export const usersApi = {
     return req<{ users: PublicUser[] }>("GET", `/users/search?${params.toString()}`);
   },
 
-  profile: (username: string) =>
-    req<{ user: UserProfile }>("GET", `/users/${username}`),
+  profile: (username: string) => req<{ user: UserProfile }>("GET", `/users/${username}`),
 
   tweets: (username: string, cursor?: string) => {
     const params = new URLSearchParams();

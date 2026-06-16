@@ -1,4 +1,5 @@
 import { useTimeline } from "@/hooks/useTimeline";
+import { useRealtimeTimeline } from "@/hooks/useRealtimeTimeline";
 import { TweetComposer } from "@/components/tweet/TweetComposer";
 import { TweetList } from "@/components/tweet/TweetList";
 import { Spinner } from "@/components/ui/Spinner";
@@ -8,6 +9,9 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 export function HomePage() {
   const { data, isLoading, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useTimeline();
+
+  // Suscripción SSE: los tweets nuevos se insertan al instante en el timeline.
+  useRealtimeTimeline();
 
   return (
     <div className="mx-auto max-w-xl">
