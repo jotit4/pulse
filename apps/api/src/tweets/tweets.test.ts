@@ -99,4 +99,29 @@ describe("tweets", () => {
     });
     expect(del.status).toBe(404);
   });
+
+  it("devuelve 404 al intentar eliminar con id que no es UUID", async () => {
+    const del = await ctx.app.request("/tweets/no-es-un-uuid", {
+      method: "DELETE",
+      headers: { cookie },
+    });
+    expect(del.status).toBe(404);
+  });
+
+  it("GET /tweets/:id devuelve 404 cuando el tweet no existe (UUID válido)", async () => {
+    const res = await ctx.app.request(`/tweets/${crypto.randomUUID()}`, {
+      headers: { cookie },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /tweets/:id devuelve el tweet existente con su contenido", async () => {
+    const created = (await (await postTweet("tweet para leer")).json()) as TweetBody;
+
+    const res = await ctx.app.request(`/tweets/${created.tweet.id}`, { headers: { cookie } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as TweetBody;
+    expect(body.tweet.content).toBe("tweet para leer");
+    expect(body.tweet.author.username).toBe("alice");
+  });
 });

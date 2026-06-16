@@ -103,6 +103,14 @@ describe("GET /users/search", () => {
     const res = await ctx.app.request("/users/search?q=ali");
     expect(res.status).toBe(401);
   });
+
+  it("sin parámetro q devuelve lista vacía (trata undefined como cadena vacía)", async () => {
+    // Sin ?q= la ruta lo coercia a "" → searchUsers retorna [].
+    const res = await ctx.app.request("/users/search", { headers: { cookie } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as UsersBody;
+    expect(body.users).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------

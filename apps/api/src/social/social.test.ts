@@ -125,6 +125,22 @@ describe("likes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("unlike a tweet inexistente (uuid válido) devuelve 404", async () => {
+    const res = await ctx.app.request(`/tweets/${crypto.randomUUID()}/like`, {
+      method: "DELETE",
+      headers: { cookie },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("unlike a id no-uuid devuelve 404", async () => {
+    const res = await ctx.app.request("/tweets/no-es-uuid/like", {
+      method: "DELETE",
+      headers: { cookie },
+    });
+    expect(res.status).toBe(404);
+  });
+
   it("like sin sesión devuelve 401", async () => {
     const res = await ctx.app.request(`/tweets/${tweetId}/like`, { method: "POST" });
     expect(res.status).toBe(401);

@@ -71,6 +71,27 @@ describe("auth", () => {
       expect(res.status).toBe(409);
     });
 
+    it("rechaza un email duplicado con 409 aunque el username sea distinto", async () => {
+      // Registramos a carol con su email.
+      await registerAndAuth(ctx.app, { username: "carol", email: "carol@example.com" });
+
+      // Intentamos registrar un usuario con distinto username pero el mismo email.
+      const res = await ctx.app.request("/auth/register", {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          username: "otracarol",
+          name: "Otra Carol",
+          email: "carol@example.com",
+          password: "password123",
+        }),
+      });
+
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain("email");
+    });
+
     it("rechaza datos inválidos con 400", async () => {
       const res = await ctx.app.request("/auth/register", {
         method: "POST",
