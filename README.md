@@ -16,10 +16,22 @@ Vite · Tailwind CSS v4 · TanStack Query · React Router v7 · Playwright · Vi
 - Tweets: crear (≤ 280 caracteres con contador), leer y eliminar los propios.
 - Follows: seguir / dejar de seguir; listados de seguidores y seguidos.
 - Likes: dar y quitar like; contadores por tweet.
-- Timeline: tweets propios + de usuarios seguidos, paginado por cursor keyset
-  (infinite scroll en la UI).
+- **Timeline dual:** pestaña "Siguiendo" (tweets propios + de usuarios seguidos) y
+  pestaña "Para ti / Explorar" (feed global de todos los usuarios). Ambos con
+  paginación por cursor keyset e infinite scroll en la UI.
 - Búsqueda de usuarios por username o nombre (coincidencia parcial, case-insensitive).
 - Perfil público con contadores (tweets / seguidores / seguidos) y botón Seguir.
+- **Sugeridos "A quién seguir":** panel con usuarios que el viewer aún no sigue,
+  ordenados por número de seguidores descendente.
+- **Replies en hilo:** responder a un tweet, ver las respuestas en orden cronológico
+  y navegar al hilo completo. Vista de tweet individual en `/tweet/:id`.
+- **Bookmarks:** guardar y eliminar tweets; lista propia paginada.
+- **Notificaciones:** eventos de follow, like y reply con badge de no leídas en la
+  barra lateral; marcar todo como leído.
+- **Dark theme** con toggle en la interfaz (persistido en `localStorage`).
+- **Pulse AI:** chatbot integrado (pestaña Chat en la UI) impulsado por Groq.
+  Proxy server-side: la API key nunca llega al navegador. Sin key configurada
+  devuelve un aviso en lugar de fallar.
 - **Actualizaciones en tiempo real** vía Server-Sent Events (`GET /realtime/stream`):
   los tweets nuevos aparecen al instante en el timeline sin recargar la página.
 - Seed con 12 usuarios, 40 tweets y un grafo denso de follows/likes cruzados para
@@ -37,6 +49,9 @@ pulse/ (monorepo pnpm)
 └── packages/
     └── shared/       schemas Zod + tipos TypeScript (contrato API ↔ web)
 ```
+
+> **Bonus implementados:** real-time SSE, reply threads, sistema de notificaciones y
+> docker-compose con tres servicios (db + api + web) en un solo comando.
 
 `@pulse/shared` es el contrato entre capas: los mismos tipos `TweetView`,
 `UserProfile`, `RegisterInput`, etc. los consume el backend para validar y el
@@ -179,17 +194,56 @@ sesión establecida por `POST /auth/login` o `POST /auth/register`.
 
 ### Usuarios
 
-| Método | Ruta                                     | Descripción                                    | Auth |
-| ------ | ---------------------------------------- | ---------------------------------------------- | ---- |
-| `GET`  | `/users/search?q=&limit=`                | Búsqueda por username o nombre (ilike)         | Sí   |
-| `GET`  | `/users/:username`                       | Perfil con contadores e `isFollowing`          | Sí   |
-| `GET`  | `/users/:username/tweets?cursor=&limit=` | Tweets del usuario paginados por cursor keyset | Sí   |
+| Método | Ruta                                     | Descripción                                                   | Auth |
+| ------ | ---------------------------------------- | ------------------------------------------------------------- | ---- |
+| `GET`  | `/users/search?q=&limit=`                | Búsqueda por username o nombre (ilike)                        | Sí   |
+| `GET`  | `/users/suggestions?limit=`              | Sugeridos "A quién seguir" (no seguidos, orden por followers) | Sí   |
+| `GET`  | `/users/:username`                       | Perfil con contadores e `isFollowing`                         | Sí   |
+| `GET`  | `/users/:username/followers`             | Lista seguidores del usuario                                  | Sí   |
+| `GET`  | `/users/:username/following`             | Lista usuarios que sigue                                      | Sí   |
+| `GET`  | `/users/:username/tweets?cursor=&limit=` | Tweets del usuario paginados por cursor keyset                | Sí   |
 
 ### Timeline
 
 | Método | Ruta                       | Descripción                                                    | Auth |
 | ------ | -------------------------- | -------------------------------------------------------------- | ---- |
 | `GET`  | `/timeline?cursor=&limit=` | Tweets propios + de seguidos (1–50 por página, por defecto 20) | Sí   |
+
+### Explorar
+
+| Método | Ruta                      | Descripción                                                                                                            | Auth |
+| ------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---- |
+| `GET`  | `/explore?cursor=&limit=` | Feed global de tweets recientes (todos los usuarios, sin filtrar por follows); misma paginación keyset que `/timeline` | Sí   |
+
+### Replies e hilos
+
+| Método | Ruta                                 | Descripción                                                   | Auth |
+| ------ | ------------------------------------ | ------------------------------------------------------------- | ---- |
+| `POST` | `/tweets/:id/reply`                  | Crea una respuesta al tweet `:id`                             | Sí   |
+| `GET`  | `/tweets/:id/replies?cursor=&limit=` | Lista las respuestas del tweet (orden cronológico ascendente) | Sí   |
+| `GET`  | `/tweets/:id/thread`                 | Devuelve el tweet y su padre directo (hilo)                   | Sí   |
+
+### Bookmarks
+
+| Método   | Ruta                        | Descripción                                        | Auth |
+| -------- | --------------------------- | -------------------------------------------------- | ---- |
+| `POST`   | `/tweets/:id/bookmark`      | Guarda el tweet `:id` en los bookmarks del viewer  | Sí   |
+| `DELETE` | `/tweets/:id/bookmark`      | Elimina el tweet `:id` de los bookmarks del viewer | Sí   |
+| `GET`    | `/bookmarks?cursor=&limit=` | Lista los tweets guardados del viewer (paginado)   | Sí   |
+
+### Notificaciones
+
+| Método | Ruta                            | Descripción                                           | Auth |
+| ------ | ------------------------------- | ----------------------------------------------------- | ---- |
+| `GET`  | `/notifications?cursor=&limit=` | Lista las notificaciones del viewer (paginado keyset) | Sí   |
+| `GET`  | `/notifications/unread-count`   | Devuelve el conteo de notificaciones no leídas        | Sí   |
+| `POST` | `/notifications/read`           | Marca todas las notificaciones del viewer como leídas | Sí   |
+
+### Chat (Pulse AI)
+
+| Método | Ruta    | Descripción                                                                                                                                                                                                                        | Auth |
+| ------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `POST` | `/chat` | Envía un historial de mensajes al chatbot; devuelve la respuesta del modelo Groq. Sin `GROQ_API_KEY` configurada responde con un aviso en lugar de llamar a la IA. Body: `{ messages: [{ role, content }][] }` (máx. 20 mensajes). | Sí   |
 
 ### Tiempo real
 
@@ -216,9 +270,9 @@ pnpm --filter @pulse/api test:coverage
 
 Los tests no necesitan PostgreSQL externo: usan **PGlite** (Postgres compilado a
 WebAssembly) en memoria. Cada suite crea su propia instancia aislada, lo que los
-hace deterministas e instantáneos. Hay 16 archivos de test con más de 130 casos
-que cubren auth, tweets, social, timeline, usuarios, realtime, seed, config y
-el event-bus.
+hace deterministas e instantáneos. Hay más de 130 casos (cobertura 93 %) que
+cubren auth, tweets, social, timeline, usuarios, explore, replies, bookmarks,
+notificaciones, chat, realtime, seed, config y el event-bus.
 
 ### Frontend — E2E con Playwright
 
@@ -248,23 +302,28 @@ pnpm test:coverage   # con cobertura en todos
 
 Copiar `.env.example` a `.env` y ajustar según el entorno.
 
-| Variable              | Valor por defecto                               | Descripción                                                                                 |
-| --------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`        | `postgresql://pulse:pulse@localhost:5432/pulse` | Connection string de PostgreSQL                                                             |
-| `API_PORT`            | `3001`                                          | Puerto en que escucha la API                                                                |
-| `NODE_ENV`            | `development`                                   | Modo de ejecución (`development` / `production` / `test`)                                   |
-| `WEB_ORIGIN`          | `http://localhost:5173`                         | Origen permitido para CORS y cookies                                                        |
-| `SESSION_TTL_DAYS`    | `30`                                            | Días de validez de la sesión                                                                |
-| `SESSION_COOKIE_NAME` | `pulse_session`                                 | Nombre de la cookie httpOnly                                                                |
-| `SECURE_COOKIE`       | _(derivado de NODE_ENV)_                        | `true` fuerza el flag Secure; `false` lo desactiva (necesario para HTTP plano en localhost) |
-| `VITE_API_BASE`       | `/api`                                          | Prefijo de ruta que usa el cliente web para llamar a la API                                 |
-| `POSTGRES_USER`       | `pulse`                                         | Usuario de PostgreSQL (usado por Docker Compose)                                            |
-| `POSTGRES_PASSWORD`   | `pulse`                                         | Contraseña de PostgreSQL (usado por Docker Compose)                                         |
-| `POSTGRES_DB`         | `pulse`                                         | Nombre de la base de datos (usado por Docker Compose)                                       |
-| `SEED_ON_START`       | `true`                                          | Si es `true`, el contenedor de la API ejecuta `db:seed` al arrancar                         |
+| Variable              | Valor por defecto                               | Descripción                                                                                                                                                                                                                                     |
+| --------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | `postgresql://pulse:pulse@localhost:5432/pulse` | Connection string de PostgreSQL                                                                                                                                                                                                                 |
+| `API_PORT`            | `3001`                                          | Puerto en que escucha la API                                                                                                                                                                                                                    |
+| `NODE_ENV`            | `development`                                   | Modo de ejecución (`development` / `production` / `test`)                                                                                                                                                                                       |
+| `WEB_ORIGIN`          | `http://localhost:5173`                         | Origen permitido para CORS y cookies                                                                                                                                                                                                            |
+| `SESSION_TTL_DAYS`    | `30`                                            | Días de validez de la sesión                                                                                                                                                                                                                    |
+| `SESSION_COOKIE_NAME` | `pulse_session`                                 | Nombre de la cookie httpOnly                                                                                                                                                                                                                    |
+| `SECURE_COOKIE`       | _(derivado de NODE_ENV)_                        | `true` fuerza el flag Secure; `false` lo desactiva (necesario para HTTP plano en localhost)                                                                                                                                                     |
+| `VITE_API_BASE`       | `/api`                                          | Prefijo de ruta que usa el cliente web para llamar a la API                                                                                                                                                                                     |
+| `POSTGRES_USER`       | `pulse`                                         | Usuario de PostgreSQL (usado por Docker Compose)                                                                                                                                                                                                |
+| `POSTGRES_PASSWORD`   | `pulse`                                         | Contraseña de PostgreSQL (usado por Docker Compose)                                                                                                                                                                                             |
+| `POSTGRES_DB`         | `pulse`                                         | Nombre de la base de datos (usado por Docker Compose)                                                                                                                                                                                           |
+| `SEED_ON_START`       | `true`                                          | Si es `true`, el contenedor de la API ejecuta `db:seed` al arrancar                                                                                                                                                                             |
+| `GROQ_API_KEY`        | _(opcional, sin valor por defecto)_             | Clave de API de Groq para el chatbot Pulse AI. Obtené una **gratis** en [console.groq.com](https://console.groq.com). Sin esta variable el endpoint `/chat` devuelve un aviso en lugar de llamar a la IA; el resto de la app no se ve afectado. |
+| `GROQ_MODEL`          | `llama-3.3-70b-versatile`                       | Modelo Groq a usar para Pulse AI. Se puede cambiar por cualquier modelo disponible en la plataforma.                                                                                                                                            |
 
 En producción detrás de HTTPS, omitir `SECURE_COOKIE` para que el flag se active
 automáticamente desde `NODE_ENV=production`.
+
+La clave `GROQ_API_KEY` nunca llega al navegador: la API la consume server-side y
+retorna solo el texto de respuesta. Esto evita exponer credenciales en el cliente.
 
 ---
 
@@ -377,6 +436,8 @@ procesamiento directamente en el pipeline de Vite sin PostCSS adicional.
 
 ## Herramientas de IA usadas
 
+### Claude Code — orquestador de subagentes
+
 El desarrollo se realizó con **Claude Code** (CLI de Anthropic) usando un modelo
 orquestador que coordinó subagentes **Claude Sonnet** para la implementación de
 cada módulo. El flujo fue:
@@ -393,6 +454,20 @@ atómico con el trailer `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 Los mensajes en español y la granularidad de los commits son parte deliberada del
 challenge para evidenciar el proceso de desarrollo.
 
+### Pulse AI — chatbot en producción (Groq)
+
+La feature **Pulse AI** integra un LLM directamente en la app usando la API de
+**Groq** (inferencia ultrarrápida sobre modelos open-source como LLaMA 3.3 70B).
+Decisiones de diseño:
+
+- **Proxy server-side:** el frontend envía el historial al endpoint `POST /chat`; la
+  API llama a Groq con la key y retorna solo la respuesta. La clave nunca viaja al
+  navegador.
+- **Fallback sin key:** si `GROQ_API_KEY` no está configurada, el endpoint responde
+  con un aviso descriptivo. Ningún otro módulo del sistema se ve afectado.
+- **Modelo configurable:** `GROQ_MODEL` permite cambiar el modelo sin recompilar
+  (por defecto `llama-3.3-70b-versatile`).
+
 ---
 
 ## Estructura de carpetas
@@ -403,15 +478,20 @@ pulse/
 │   ├── api/
 │   │   ├── src/
 │   │   │   ├── auth/          # registro, login, sesiones, cookies, middleware
+│   │   │   ├── bookmarks/     # guardar/eliminar tweets; lista paginada
+│   │   │   ├── chat/          # Pulse AI — proxy Groq server-side
 │   │   │   ├── db/            # schema Drizzle, migraciones, seed
 │   │   │   ├── events/        # TweetBus (event-bus en proceso para SSE)
+│   │   │   ├── explore/       # feed global (Para ti / Explorar)
 │   │   │   ├── http/          # errores, validación, tipos de Hono env
+│   │   │   ├── notifications/ # follows, likes y replies; unread-count; mark-read
 │   │   │   ├── realtime/      # rutas SSE y lógica de visibilidad
+│   │   │   ├── replies/       # reply threads; vista de hilo
 │   │   │   ├── routes/        # health
 │   │   │   ├── social/        # follows y likes
-│   │   │   ├── timeline/      # timeline keyset
+│   │   │   ├── timeline/      # timeline keyset (Siguiendo)
 │   │   │   ├── tweets/        # CRUD de tweets
-│   │   │   ├── users/         # búsqueda, perfil, tweets de usuario
+│   │   │   ├── users/         # búsqueda, sugeridos, perfil, tweets de usuario
 │   │   │   ├── app.ts         # factory de la app Hono (inyección de deps)
 │   │   │   ├── config.ts      # configuración desde variables de entorno
 │   │   │   └── index.ts       # entrypoint del servidor HTTP
@@ -423,7 +503,9 @@ pulse/
 │       │   ├── auth/          # AuthContext, ProtectedRoute, hook useAuth
 │       │   ├── components/    # UI: layout, tweet cards, formularios, usuarios
 │       │   ├── hooks/         # TanStack Query (timeline, tweets, social, users)
-│       │   └── pages/         # HomePage, ProfilePage, SearchPage, Login, Register
+│       │   └── pages/         # HomePage, ProfilePage, SearchPage, TweetDetailPage,
+│       │                      #   BookmarksPage, NotificationsPage, ChatPage,
+│       │                      #   LoginPage, RegisterPage
 │       ├── tests/e2e/         # tests Playwright
 │       ├── Dockerfile
 │       └── package.json
