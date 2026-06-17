@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router";
+import { useParams, Navigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import type { TweetPage } from "@pulse/shared";
@@ -18,31 +18,30 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 /** Pestañas disponibles en el perfil. */
 type Tab = "tweets" | "seguidores" | "seguidos";
 
-/** Página de perfil de usuario con tabs de tweets, seguidores y seguidos. */
-export function ProfilePage() {
-  const { username } = useParams<{ username: string }>();
+/** Contenido real del perfil; recibe username ya validado (siempre string). */
+function ProfileContent({ username }: { username: string }) {
   const { user: currentUser } = useAuth();
   const [tabActiva, setTabActiva] = useState<Tab>("tweets");
 
-  const { data: profileData, isLoading, error } = useProfile(username!);
+  const { data: profileData, isLoading, error } = useProfile(username);
   const user = profileData?.user;
 
-  const { follow, unfollow, isPending: followPending } = useFollow(username!);
+  const { follow, unfollow, isPending: followPending } = useFollow(username);
 
   // Tweets del usuario
-  const tweetsQuery = useUserTweets(username!);
+  const tweetsQuery = useUserTweets(username);
 
   // Seguidores del usuario
   const followersQuery = useQuery({
     queryKey: ["followers", username],
-    queryFn: () => socialApi.followers(username!),
+    queryFn: () => socialApi.followers(username),
     enabled: tabActiva === "seguidores",
   });
 
   // Seguidos del usuario
   const followingQuery = useQuery({
     queryKey: ["following", username],
-    queryFn: () => socialApi.following(username!),
+    queryFn: () => socialApi.following(username),
     enabled: tabActiva === "seguidos",
   });
 
@@ -137,20 +136,27 @@ export function ProfilePage() {
       </div>
 
       {/* — Tabs — */}
-      <div className="flex border-b border-gray-100">
+      {/* Fix #6: roles ARIA para accesibilidad de tabs */}
+      <div className="flex border-b border-gray-100" role="tablist">
         <button
+          role="tab"
+          aria-selected={tabActiva === "tweets"}
           className={tabActiva === "tweets" ? tabActiva_ : tabInactiva}
           onClick={() => setTabActiva("tweets")}
         >
           Tweets
         </button>
         <button
+          role="tab"
+          aria-selected={tabActiva === "seguidores"}
           className={tabActiva === "seguidores" ? tabActiva_ : tabInactiva}
           onClick={() => setTabActiva("seguidores")}
         >
           Seguidores
         </button>
         <button
+          role="tab"
+          aria-selected={tabActiva === "seguidos"}
           className={tabActiva === "seguidos" ? tabActiva_ : tabInactiva}
           onClick={() => setTabActiva("seguidos")}
         >
@@ -159,7 +165,8 @@ export function ProfilePage() {
       </div>
 
       {/* — Contenido de los tabs — */}
-      <div>
+      {/* Fix #6: panel con role="tabpanel" */}
+      <div role="tabpanel">
         {tabActiva === "tweets" && (
           <>
             {tweetsQuery.isLoading && (
@@ -231,4 +238,20 @@ export function ProfilePage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Página de perfil de usuario.
+ * Fix #1: si useParams no devuelve username (ruta mal configurada), redirige al inicio.
+ * Los hooks que dependen del username se invocan en ProfileContent, garantizando
+ * que el orden de hooks de React sea siempre el mismo en ambas ramas.
+ */
+export function ProfilePage() {
+  const { username } = useParams<{ username: string }>();
+
+  if (!username) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <ProfileContent username={username} />;
 }

@@ -24,7 +24,12 @@ export function SearchPage() {
   return (
     <div>
       <div className="px-4 py-4 border-b border-gray-100">
+        {/* Fix #4: label asociado al input para accesibilidad */}
+        <label htmlFor="buscar-usuarios" className="sr-only">
+          Buscar usuarios
+        </label>
         <input
+          id="buscar-usuarios"
           type="search"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}

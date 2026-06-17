@@ -33,6 +33,8 @@ export function NavBar() {
         aria-label="Navegación principal"
         className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-gray-200 bg-white sm:hidden"
       >
+        {/* Fix #5: aria-hidden en los emojis para que el lector de pantalla
+            solo anuncie el texto del enlace, no el carácter emoji. */}
         {navItems.map(({ to, label, icon }) => (
           <NavLink
             key={to}
@@ -42,7 +44,7 @@ export function NavBar() {
               `flex flex-1 flex-col items-center gap-0.5 py-3 text-xs transition-colors ${isActive ? activeCls : inactiveCls}`
             }
           >
-            <span className="text-xl">{icon}</span>
+            <span className="text-xl" aria-hidden="true">{icon}</span>
             <span>{label}</span>
           </NavLink>
         ))}
@@ -53,7 +55,7 @@ export function NavBar() {
               `flex flex-1 flex-col items-center gap-0.5 py-3 text-xs transition-colors ${isActive ? activeCls : inactiveCls}`
             }
           >
-            <span className="text-xl">👤</span>
+            <span className="text-xl" aria-hidden="true">👤</span>
             <span>Perfil</span>
           </NavLink>
         )}
@@ -75,7 +77,7 @@ export function NavBar() {
               `flex items-center gap-3 rounded-full px-4 py-3 text-base transition-colors ${isActive ? activeCls + " bg-brand/5" : inactiveCls}`
             }
           >
-            <span>{icon}</span>
+            <span aria-hidden="true">{icon}</span>
             <span>{label}</span>
           </NavLink>
         ))}
@@ -87,7 +89,7 @@ export function NavBar() {
               `flex items-center gap-3 rounded-full px-4 py-3 text-base transition-colors ${isActive ? activeCls + " bg-brand/5" : inactiveCls}`
             }
           >
-            <span>👤</span>
+            <span aria-hidden="true">👤</span>
             <span>Perfil</span>
           </NavLink>
         )}
