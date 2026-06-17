@@ -1,5 +1,5 @@
 import type { PublicUser, TweetPage, UserProfile, UserSearchResult } from "@pulse/shared";
-import { and, eq, ilike, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { toPublicUser } from "../auth/service";
 import type { Database } from "../db";
 import { follows, tweets, users, type User } from "../db/schema";
@@ -57,22 +57,18 @@ export async function searchUsers(
 
   if (rows.length === 0) return [];
 
-  // Verificar en paralelo qué usuarios sigue el viewer
-  const followChecks = await Promise.all(
-    rows.map((target) =>
-      db
-        .select({ c: sql<number>`count(*)::int` })
-        .from(follows)
-        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, target.id)))
-        .then(([row]) => ({ id: target.id, isFollowing: Number(row?.c ?? 0) > 0 })),
-    ),
-  );
+  // Una sola consulta para determinar qué usuarios del conjunto sigue el viewer
+  const resultIds = rows.map((r) => r.id);
+  const followedRows = await db
+    .select({ followingId: follows.followingId })
+    .from(follows)
+    .where(and(eq(follows.followerId, viewerId), inArray(follows.followingId, resultIds)));
 
-  const followMap = new Map(followChecks.map(({ id, isFollowing }) => [id, isFollowing]));
+  const followSet = new Set(followedRows.map((r) => r.followingId));
 
   return rows.map((row) => ({
     ...toPublicUser(row),
-    isFollowing: followMap.get(row.id) ?? false,
+    isFollowing: followSet.has(row.id),
   }));
 }
 
