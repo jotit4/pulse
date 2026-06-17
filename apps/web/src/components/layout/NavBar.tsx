@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "@/auth/useAuth";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +12,7 @@ import {
   SparkleIcon,
 } from "@/components/icons/Icons";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { ComposeModal } from "@/components/tweet/ComposeModal";
 
 interface NavItemDef {
   to: string;
@@ -29,12 +31,22 @@ const staticNavItems: NavItemDef[] = [
 const activeCls = "font-bold text-[var(--color-x-text)]";
 const inactiveCls = "text-[var(--color-x-muted)] hover:text-[var(--color-x-text)]";
 
+/** Ícono de pluma para el FAB mobile */
+function PenIcon({ width = 24, height = 24 }: { width?: number; height?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={width} height={height} fill="currentColor" aria-hidden="true">
+      <path d="M21.7 5.3a1 1 0 0 0 0-1.41l-1.6-1.6a1 1 0 0 0-1.41 0L16.5 4.5l3 3 2.2-2.2ZM14.5 6.5l-9 9V18h2.5l9-9-2.5-2.5Z" />
+    </svg>
+  );
+}
+
 /** Barra de navegación: inferior en móvil (<640px), lateral en escritorio (≥640px). */
 export function NavBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { data: unreadData } = useUnreadCount();
   const unreadCount = unreadData?.count ?? 0;
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
 
   const allNavItems: NavItemDef[] = user
     ? [...staticNavItems, { to: `/${user.username}`, label: "Perfil", Icon: UserIcon }]
@@ -110,6 +122,23 @@ export function NavBar() {
         ))}
       </nav>
 
+      {/* FAB mobile — solo visible en móvil (<640px), por encima de la nav inferior */}
+      <button
+        onClick={() => setIsComposeOpen(true)}
+        aria-label="Componer tweet"
+        className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-colors sm:hidden"
+        style={{ backgroundColor: "var(--color-x-brand)" }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+            "var(--color-x-brand-hover)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--color-x-brand)";
+        }}
+      >
+        <PenIcon width={22} height={22} />
+      </button>
+
       {/* Sidebar lateral en escritorio */}
       <aside
         aria-label="Navegación lateral"
@@ -140,14 +169,14 @@ export function NavBar() {
           </NavLink>
         ))}
 
-        {/* Botón Postear */}
-        <NavLink
-          to="/"
+        {/* Botón Postear — abre el modal de composición */}
+        <button
+          onClick={() => setIsComposeOpen(true)}
           aria-label="Postear"
           className="mt-4 flex w-full items-center justify-center rounded-full bg-[var(--color-x-brand)] px-6 py-3 text-base font-bold text-white transition-colors hover:bg-[var(--color-x-brand-hover)]"
         >
           Postear
-        </NavLink>
+        </button>
 
         {/* Footer: usuario + logout */}
         <div className="mt-auto">
@@ -161,6 +190,9 @@ export function NavBar() {
           )}
         </div>
       </aside>
+
+      {/* Modal de composición */}
+      <ComposeModal isOpen={isComposeOpen} onClose={() => setIsComposeOpen(false)} />
     </>
   );
 }
