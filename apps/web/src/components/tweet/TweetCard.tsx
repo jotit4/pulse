@@ -1,12 +1,17 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import type { TweetView } from "@pulse/shared";
 import { useAuth } from "@/auth/useAuth";
 import { useLike } from "@/hooks/useLike";
 import { useDeleteTweet } from "@/hooks/useDeleteTweet";
+import { useBookmark } from "@/hooks/useBookmark";
 import { UserAvatar } from "@/components/user/UserAvatar";
+import { MessageIcon, BookmarkIcon } from "@/components/icons/Icons";
 
 interface TweetCardProps {
   tweet: TweetView;
+  /** Si es true, el clic en el artículo no navega (útil dentro del detalle). */
+  disableNavigation?: boolean;
 }
 
 /** Formatea una fecha ISO a texto relativo simple en espanol. */
@@ -34,17 +39,21 @@ function fechaRelativa(isoString: string): string {
 }
 
 /** Tarjeta de un tweet estilo X — avatar izquierda, acciones con hover de color. */
-export function TweetCard({ tweet }: TweetCardProps) {
+export function TweetCard({ tweet, disableNavigation = false }: TweetCardProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { like, unlike } = useLike();
   const deleteMutation = useDeleteTweet();
+  const bookmarkToggle = useBookmark(tweet.id);
 
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
 
   const esMio = user?.username === tweet.author.username;
   const isPendingLike = like.isPending || unlike.isPending;
+  const isBookmarked = tweet.bookmarkedByMe ?? false;
 
-  function handleLike() {
+  function handleLike(e: React.MouseEvent) {
+    e.stopPropagation();
     if (isPendingLike) return;
     if (tweet.likedByMe) {
       unlike.mutate(tweet.id);
@@ -53,7 +62,8 @@ export function TweetCard({ tweet }: TweetCardProps) {
     }
   }
 
-  function handleDelete() {
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
     if (deleteMutation.isPending) return;
     if (!confirmandoBorrar) {
       setConfirmandoBorrar(true);
@@ -63,16 +73,35 @@ export function TweetCard({ tweet }: TweetCardProps) {
     deleteMutation.mutate(tweet.id);
   }
 
-  function handleCancelarBorrar() {
+  function handleCancelarBorrar(e: React.MouseEvent) {
+    e.stopPropagation();
     setConfirmandoBorrar(false);
+  }
+
+  function handleBookmark(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (bookmarkToggle.isPending) return;
+    bookmarkToggle.mutate(isBookmarked);
+  }
+
+  function handleReplyClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    void navigate(`/tweet/${tweet.id}`);
+  }
+
+  function handleCardClick() {
+    if (disableNavigation) return;
+    void navigate(`/tweet/${tweet.id}`);
   }
 
   return (
     <article
       className="px-4 py-3 transition-colors cursor-pointer"
       style={{ borderBottom: "1px solid var(--color-x-border)" }}
+      onClick={handleCardClick}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-x-surface)";
+        if (!disableNavigation)
+          (e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-x-surface)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLElement).style.backgroundColor = "";
@@ -115,6 +144,25 @@ export function TweetCard({ tweet }: TweetCardProps) {
 
           {/* Acciones */}
           <div className="mt-3 flex items-center gap-6">
+            {/* Respuestas */}
+            <button
+              onClick={handleReplyClick}
+              aria-label="Ver respuestas"
+              className="flex items-center gap-1.5 text-sm transition-colors"
+              style={{ color: "var(--color-x-muted)" }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "var(--color-x-brand)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "var(--color-x-muted)";
+              }}
+            >
+              <MessageIcon width={16} height={16} />
+              {tweet.replyCount !== undefined && tweet.replyCount > 0 && (
+                <span>{tweet.replyCount}</span>
+              )}
+            </button>
+
             {/* Like */}
             <button
               onClick={handleLike}
@@ -150,6 +198,28 @@ export function TweetCard({ tweet }: TweetCardProps) {
                 />
               </svg>
               <span>{tweet.likesCount}</span>
+            </button>
+
+            {/* Bookmark */}
+            <button
+              onClick={handleBookmark}
+              disabled={bookmarkToggle.isPending}
+              aria-label={isBookmarked ? "Quitar bookmark" : "Guardar en bookmarks"}
+              aria-pressed={isBookmarked}
+              className="flex items-center gap-1.5 text-sm transition-colors disabled:opacity-60"
+              style={{
+                color: isBookmarked ? "var(--color-x-brand)" : "var(--color-x-muted)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isBookmarked)
+                  (e.currentTarget as HTMLElement).style.color = "var(--color-x-brand)";
+              }}
+              onMouseLeave={(e) => {
+                if (!isBookmarked)
+                  (e.currentTarget as HTMLElement).style.color = "var(--color-x-muted)";
+              }}
+            >
+              <BookmarkIcon filled={isBookmarked} width={16} height={16} />
             </button>
 
             {/* Borrar (solo autor) */}

@@ -7,6 +7,7 @@ import type {
   RegisterInput,
   LoginInput,
   CreateTweetInput,
+  NotificationPage,
 } from "@pulse/shared";
 
 const BASE = (import.meta.env["VITE_API_BASE"] as string | undefined) ?? "/api";
@@ -150,4 +151,50 @@ export const exploreApi = {
     const qs = params.size > 0 ? `?${params.toString()}` : "";
     return req<TweetPage>("GET", `/explore${qs}`);
   },
+};
+
+// ---------------------------------------------------------------------------
+// Replies
+// ---------------------------------------------------------------------------
+
+export const repliesApi = {
+  reply: (tweetId: string, content: string) =>
+    req<{ tweet: TweetView }>("POST", `/tweets/${tweetId}/reply`, { content }),
+
+  list: (tweetId: string, cursor?: string, limit?: number) => {
+    const params = new URLSearchParams();
+    if (cursor) params.set("cursor", cursor);
+    if (limit !== undefined) params.set("limit", String(limit));
+    const qs = params.size > 0 ? `?${params.toString()}` : "";
+    return req<TweetPage>("GET", `/tweets/${tweetId}/replies${qs}`);
+  },
+
+  thread: (tweetId: string) =>
+    req<{ tweet: TweetView; parent: TweetView | null }>("GET", `/tweets/${tweetId}/thread`),
+};
+
+// ---------------------------------------------------------------------------
+// Bookmarks
+// ---------------------------------------------------------------------------
+
+export const bookmarksApi = {
+  add: (tweetId: string) => req<{ ok: boolean }>("POST", `/tweets/${tweetId}/bookmark`),
+  remove: (tweetId: string) => req<{ ok: boolean }>("DELETE", `/tweets/${tweetId}/bookmark`),
+  list: (cursor?: string) => {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return req<TweetPage>("GET", `/bookmarks${qs}`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export const notificationsApi = {
+  list: (cursor?: string) => {
+    const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    return req<NotificationPage>("GET", `/notifications${qs}`);
+  },
+  unreadCount: () => req<{ count: number }>("GET", "/notifications/unread-count"),
+  markRead: () => req<{ ok: boolean }>("POST", "/notifications/read"),
 };

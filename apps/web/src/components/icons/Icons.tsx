@@ -153,3 +153,29 @@ export function UserIcon({ filled = false, width = 24, height = 24, className }:
     </svg>
   );
 }
+
+/** Icono burbuja de mensaje (Respuestas) */
+export function MessageIcon({ filled = false, width = 24, height = 24, className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={width}
+      height={height}
+      fill={filled ? "currentColor" : "none"}
+      stroke={filled ? "none" : "currentColor"}
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+    >
+      {filled ? (
+        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.524 3.66 1.438 5.168L2.046 21.953a.5.5 0 0 0 .621.622l4.804-1.393A9.953 9.953 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2Z" />
+      ) : (
+        <>
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </>
+      )}
+    </svg>
+  );
+}

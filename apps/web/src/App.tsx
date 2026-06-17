@@ -9,6 +9,7 @@ import { SearchPage } from "@/pages/SearchPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { NotificationsPage } from "@/pages/NotificationsPage";
 import { BookmarksPage } from "@/pages/BookmarksPage";
+import { TweetDetailPage } from "@/pages/TweetDetailPage";
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
+            <Route path="/tweet/:id" element={<TweetDetailPage />} />
             <Route path="/:username" element={<ProfilePage />} />
           </Route>
         </Route>

@@ -9,6 +9,7 @@ import {
   BookmarkIcon,
   UserIcon,
 } from "@/components/icons/Icons";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 interface NavItemDef {
   to: string;
@@ -30,6 +31,8 @@ const inactiveCls = "text-[var(--color-x-muted)] hover:text-[var(--color-x-text)
 export function NavBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.count ?? 0;
 
   const allNavItems: NavItemDef[] = user
     ? [...staticNavItems, { to: `/${user.username}`, label: "Perfil", Icon: UserIcon }]
@@ -40,6 +43,44 @@ export function NavBar() {
     void navigate("/login");
   }
 
+  function renderIcon(item: NavItemDef, isActive: boolean) {
+    const icon = <item.Icon filled={isActive} width={22} height={22} />;
+
+    if (item.to !== "/notifications" || unreadCount === 0) return icon;
+
+    return (
+      <span className="relative inline-flex">
+        {icon}
+        <span
+          aria-label={`${unreadCount} notificaciones no leídas`}
+          className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold text-white"
+          style={{ backgroundColor: "var(--color-x-brand)" }}
+        >
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      </span>
+    );
+  }
+
+  function renderIconDesktop(item: NavItemDef, isActive: boolean) {
+    const icon = <item.Icon filled={isActive} width={24} height={24} />;
+
+    if (item.to !== "/notifications" || unreadCount === 0) return icon;
+
+    return (
+      <span className="relative inline-flex">
+        {icon}
+        <span
+          aria-label={`${unreadCount} notificaciones no leídas`}
+          className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold text-white"
+          style={{ backgroundColor: "var(--color-x-brand)" }}
+        >
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <>
       {/* Navegación inferior fija en móvil */}
@@ -47,20 +88,20 @@ export function NavBar() {
         aria-label="Navegación principal"
         className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-[var(--color-x-border)] bg-[var(--color-x-bg)] sm:hidden"
       >
-        {allNavItems.map(({ to, label, Icon }) => (
+        {allNavItems.map((item) => (
           <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            aria-label={label}
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            aria-label={item.label}
             className={({ isActive }) =>
               `flex flex-1 flex-col items-center gap-0.5 py-3 text-xs transition-colors ${isActive ? activeCls : inactiveCls}`
             }
           >
             {({ isActive }) => (
               <>
-                <Icon filled={isActive} width={22} height={22} />
-                <span>{label}</span>
+                {renderIcon(item, isActive)}
+                <span>{item.label}</span>
               </>
             )}
           </NavLink>
@@ -78,20 +119,20 @@ export function NavBar() {
         </div>
 
         {/* Items de navegación */}
-        {allNavItems.map(({ to, label, Icon }) => (
+        {allNavItems.map((item) => (
           <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            aria-label={label}
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            aria-label={item.label}
             className={({ isActive }) =>
               `flex items-center gap-4 rounded-full px-4 py-3 text-base transition-colors hover:bg-[var(--color-x-surface)] ${isActive ? activeCls : inactiveCls}`
             }
           >
             {({ isActive }) => (
               <>
-                <Icon filled={isActive} width={24} height={24} />
-                <span>{label}</span>
+                {renderIconDesktop(item, isActive)}
+                <span>{item.label}</span>
               </>
             )}
           </NavLink>
