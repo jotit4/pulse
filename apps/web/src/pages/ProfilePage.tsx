@@ -57,11 +57,7 @@ function ProfileContent({ username }: { username: string }) {
   // — Manejo de errores —
   if (error) {
     if (error instanceof ApiError && error.status === 404) {
-      return (
-        <div className="px-4 py-12 text-center text-gray-500">
-          Usuario no encontrado
-        </div>
-      );
+      return <div className="px-4 py-12 text-center text-gray-500">Usuario no encontrado</div>;
     }
     return (
       <div className="px-4 py-8">
@@ -98,11 +94,7 @@ function ProfileContent({ username }: { username: string }) {
                   Siguiendo
                 </Button>
               ) : (
-                <Button
-                  variant="primary"
-                  onClick={() => follow.mutate()}
-                  isLoading={followPending}
-                >
+                <Button variant="primary" onClick={() => follow.mutate()} isLoading={followPending}>
                   Seguir
                 </Button>
               )}
@@ -117,9 +109,7 @@ function ProfileContent({ username }: { username: string }) {
         </div>
 
         {/* Bio */}
-        {user.bio && (
-          <p className="mt-2 text-sm text-gray-700">{user.bio}</p>
-        )}
+        {user.bio && <p className="mt-2 text-sm text-gray-700">{user.bio}</p>}
 
         {/* Contadores */}
         <div className="mt-3 flex gap-4 text-sm text-gray-500">

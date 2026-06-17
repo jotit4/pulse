@@ -55,9 +55,7 @@ export function SearchPage() {
 
         {/* Sin resultados */}
         {query.trim().length >= 2 && !isLoading && data?.users.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-gray-500">
-            Sin resultados para {query}
-          </p>
+          <p className="px-4 py-8 text-center text-sm text-gray-500">Sin resultados para {query}</p>
         )}
 
         {/* Lista de usuarios encontrados */}

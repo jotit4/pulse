@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useEffect, useState, type ReactNode } from "react";
 import type { PublicUser, RegisterInput, LoginInput } from "@pulse/shared";
 import { authApi, ApiError } from "@/api/client";
 
@@ -51,8 +45,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Fix #3: error de red o 5xx — NO asumir deslogueado.
           // Dejamos user en null para no bloquear la app, pero exponemos
           // sessionError para que los consumidores puedan reaccionar si lo necesitan.
-          const mensaje =
-            err instanceof Error ? err.message : "Error al verificar sesión";
+          const mensaje = err instanceof Error ? err.message : "Error al verificar sesión";
           console.error("Error al verificar sesión:", err);
           setState({ user: null, isLoading: false, sessionError: mensaje });
         }

@@ -13,7 +13,7 @@ git log --oneline                 # ver la historia del desarrollo
 ```
 
 - **Backend:** `apps/api` — Hono + Drizzle + PostgreSQL (PGlite en memoria para tests).
-- **Frontend:** `apps/web` — React + Vite + Tailwind v4 + TanStack Query *(pendiente)*.
+- **Frontend:** `apps/web` — React + Vite + Tailwind v4 + TanStack Query _(pendiente)_.
 - **Compartido:** `packages/shared` — schemas Zod + tipos (contrato API ↔ web).
 
 ## Convenciones NO NEGOCIABLES (el challenge evalúa el proceso)
@@ -50,6 +50,7 @@ Drizzle (users/sessions/tweets/follows/likes) + migraciones · `@pulse/shared` �
 timeline (cursor keyset).
 
 ### Endpoints implementados
+
 ```
 GET    /health
 POST   /auth/register      POST /auth/login      POST /auth/logout     GET /auth/me
@@ -82,6 +83,7 @@ GET    /timeline?cursor=&limit=
    grafo de follows, auth, trade-offs) y herramientas de AI usadas.
 
 ## Modo de trabajo
+
 Orquestar con subagentes Sonnet para implementación cuando convenga (cuidar contexto);
 paralelizar sólo cuando los módulos no comparten archivos (p. ej. el frontend). El
 orquestador conserva el control de los commits y verifica con typecheck + tests.

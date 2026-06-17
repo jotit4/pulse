@@ -142,8 +142,8 @@ export function TweetCard({ tweet }: TweetCardProps) {
             </button>
 
             {/* Botón borrar (solo si es el autor) — Fix #7: confirmación inline */}
-            {esMio && (
-              confirmandoBorrar ? (
+            {esMio &&
+              (confirmandoBorrar ? (
                 <span className="flex items-center gap-1 text-sm">
                   <button
                     onClick={handleDelete}
@@ -186,8 +186,7 @@ export function TweetCard({ tweet }: TweetCardProps) {
                   </svg>
                   <span>Borrar</span>
                 </button>
-              )
-            )}
+              ))}
           </div>
         </div>
       </div>

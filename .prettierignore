@@ -1,0 +1,7 @@
+# Archivos generados o gestionados por herramientas — prettier no debe tocarlos
+pnpm-lock.yaml
+**/dist/**
+**/build/**
+**/coverage/**
+**/playwright-report/**
+**/test-results/**

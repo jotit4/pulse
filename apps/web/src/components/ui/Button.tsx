@@ -8,14 +8,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary:
-    "bg-brand text-white hover:bg-brand/90 disabled:opacity-50",
-  secondary:
-    "bg-transparent border border-brand text-brand hover:bg-brand/10 disabled:opacity-50",
-  ghost:
-    "bg-transparent text-gray-700 hover:bg-gray-100 disabled:opacity-50",
-  danger:
-    "bg-red-500 text-white hover:bg-red-600 disabled:opacity-50",
+  primary: "bg-brand text-white hover:bg-brand/90 disabled:opacity-50",
+  secondary: "bg-transparent border border-brand text-brand hover:bg-brand/10 disabled:opacity-50",
+  ghost: "bg-transparent text-gray-700 hover:bg-gray-100 disabled:opacity-50",
+  danger: "bg-red-500 text-white hover:bg-red-600 disabled:opacity-50",
 };
 
 /** Botón base con variantes y estado de carga. */

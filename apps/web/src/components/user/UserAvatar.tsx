@@ -12,13 +12,7 @@ interface UserAvatarProps {
  */
 export function UserAvatar({ name, avatarUrl, size = "h-10 w-10" }: UserAvatarProps) {
   if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name}
-        className={`${size} rounded-full object-cover`}
-      />
-    );
+    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover`} />;
   }
 
   // Inicial del nombre como fallback

@@ -44,7 +44,9 @@ export function NavBar() {
               `flex flex-1 flex-col items-center gap-0.5 py-3 text-xs transition-colors ${isActive ? activeCls : inactiveCls}`
             }
           >
-            <span className="text-xl" aria-hidden="true">{icon}</span>
+            <span className="text-xl" aria-hidden="true">
+              {icon}
+            </span>
             <span>{label}</span>
           </NavLink>
         ))}
@@ -55,7 +57,9 @@ export function NavBar() {
               `flex flex-1 flex-col items-center gap-0.5 py-3 text-xs transition-colors ${isActive ? activeCls : inactiveCls}`
             }
           >
-            <span className="text-xl" aria-hidden="true">👤</span>
+            <span className="text-xl" aria-hidden="true">
+              👤
+            </span>
             <span>Perfil</span>
           </NavLink>
         )}
