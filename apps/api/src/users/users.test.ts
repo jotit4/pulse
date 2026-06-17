@@ -1,10 +1,4 @@
-import type {
-  PublicUser,
-  TweetPage,
-  TweetView,
-  UserProfile,
-  UserSearchResult,
-} from "@pulse/shared";
+import type { TweetPage, TweetView, UserProfile, UserSearchResult } from "@pulse/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestApp, registerAndAuth, type TestApp } from "../../test/helpers/app";
 
@@ -371,6 +365,161 @@ describe("GET /users/:username/tweets", () => {
 
   it("requiere autenticación (401 sin cookie)", async () => {
     const res = await ctx.app.request("/users/alice/tweets");
+    expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite de sugerencias de a quién seguir
+// ---------------------------------------------------------------------------
+
+describe("GET /users/suggestions", () => {
+  let ctx: TestApp;
+  let aliceCookie: string;
+
+  beforeEach(async () => {
+    ctx = await createTestApp();
+    const alice = await registerAndAuth(ctx.app, {
+      username: "alice",
+      name: "Alice",
+      email: "alice@example.com",
+    });
+    aliceCookie = alice.cookieHeader;
+  });
+
+  afterEach(async () => {
+    await ctx.close();
+  });
+
+  /** Obtiene las sugerencias para el viewer autenticado con `cookieHeader`. */
+  async function getSuggestions(
+    cookieHeader: string,
+    params: Record<string, string> = {},
+  ): Promise<{ users: UserSearchResult[] }> {
+    const qs = new URLSearchParams(params).toString();
+    const url = `/users/suggestions${qs ? `?${qs}` : ""}`;
+    const res = await ctx.app.request(url, { headers: { cookie: cookieHeader } });
+    expect(res.status).toBe(200);
+    return (await res.json()) as { users: UserSearchResult[] };
+  }
+
+  it("devuelve lista vacía si no hay otros usuarios", async () => {
+    const body = await getSuggestions(aliceCookie);
+    expect(body.users).toEqual([]);
+  });
+
+  it("excluye al viewer de las sugerencias", async () => {
+    const body = await getSuggestions(aliceCookie);
+    const self = body.users.find((u) => u.username === "alice");
+    expect(self).toBeUndefined();
+  });
+
+  it("incluye usuarios que no son seguidos por el viewer", async () => {
+    await registerAndAuth(ctx.app, {
+      username: "bob",
+      name: "Bob",
+      email: "bob@example.com",
+    });
+    const body = await getSuggestions(aliceCookie);
+    const usernames = body.users.map((u) => u.username);
+    expect(usernames).toContain("bob");
+  });
+
+  it("excluye usuarios que el viewer ya sigue", async () => {
+    await registerAndAuth(ctx.app, {
+      username: "bob",
+      name: "Bob",
+      email: "bob@example.com",
+    });
+    await registerAndAuth(ctx.app, {
+      username: "carol",
+      name: "Carol",
+      email: "carol@example.com",
+    });
+
+    // Alice sigue a bob
+    await ctx.app.request("/users/bob/follow", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+    });
+
+    const body = await getSuggestions(aliceCookie);
+    const usernames = body.users.map((u) => u.username);
+    expect(usernames).not.toContain("bob"); // ya seguido → excluido
+    expect(usernames).toContain("carol"); // no seguido → incluido
+  });
+
+  it("todos los resultados tienen isFollowing=false", async () => {
+    await registerAndAuth(ctx.app, {
+      username: "bob",
+      name: "Bob",
+      email: "bob@example.com",
+    });
+    await registerAndAuth(ctx.app, {
+      username: "carol",
+      name: "Carol",
+      email: "carol@example.com",
+    });
+
+    const body = await getSuggestions(aliceCookie);
+    for (const user of body.users) {
+      expect(user.isFollowing).toBe(false);
+    }
+  });
+
+  it("respeta el parámetro limit", async () => {
+    // Registrar varios usuarios
+    for (let i = 1; i <= 5; i++) {
+      await registerAndAuth(ctx.app, {
+        username: `user${i}`,
+        name: `User ${i}`,
+        email: `user${i}@example.com`,
+      });
+    }
+
+    const body = await getSuggestions(aliceCookie, { limit: "2" });
+    expect(body.users).toHaveLength(2);
+  });
+
+  it("limit por defecto es 5 (máximo sin parámetro)", async () => {
+    // Registrar 7 usuarios adicionales
+    for (let i = 1; i <= 7; i++) {
+      await registerAndAuth(ctx.app, {
+        username: `extra${i}`,
+        name: `Extra ${i}`,
+        email: `extra${i}@example.com`,
+      });
+    }
+
+    const body = await getSuggestions(aliceCookie);
+    expect(body.users.length).toBe(5);
+  });
+
+  it("ordena por followers DESC: el más popular aparece primero", async () => {
+    const bob = await registerAndAuth(ctx.app, {
+      username: "bob",
+      name: "Bob",
+      email: "bob@example.com",
+    });
+    const carol = await registerAndAuth(ctx.app, {
+      username: "carol",
+      name: "Carol",
+      email: "carol@example.com",
+    });
+
+    // Carol recibe 1 follower (bob la sigue) → más popular que bob (0 followers)
+    await ctx.app.request("/users/carol/follow", {
+      method: "POST",
+      headers: { cookie: bob.cookieHeader },
+    });
+
+    const body = await getSuggestions(aliceCookie);
+    expect(body.users[0]!.username).toBe("carol");
+    expect(body.users[1]!.username).toBe("bob");
+  });
+
+  it("requiere autenticación (401 sin cookie)", async () => {
+    const res = await ctx.app.request("/users/suggestions");
     expect(res.status).toBe(401);
   });
 });

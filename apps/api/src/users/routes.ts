@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { requireAuth } from "../auth/middleware";
 import type { AppDeps } from "../config";
 import type { AppEnv } from "../http/types";
-import { getUserProfile, getUserTweets, searchUsers } from "./service";
+import { getUserProfile, getUserSuggestions, getUserTweets, searchUsers } from "./service";
 
 /**
  * Rutas de usuarios: búsqueda, perfil y tweets de un usuario.
@@ -25,6 +25,18 @@ export function createUserRoutes({ db, config }: AppDeps) {
     const limit = limitRaw ? parseInt(limitRaw, 10) : undefined;
     const result = await searchUsers(db, q, c.get("user").id, limit);
     return c.json({ users: result });
+  });
+
+  /**
+   * GET /users/suggestions?limit=
+   * "A quién seguir": usuarios que el viewer no sigue, ordenados por followers DESC.
+   * DEBE registrarse ANTES que /:username para que Hono no lo capture como parámetro.
+   */
+  r.get("/suggestions", auth, async (c) => {
+    const limitRaw = c.req.query("limit");
+    const limit = limitRaw ? parseInt(limitRaw, 10) : undefined;
+    const suggestions = await getUserSuggestions(db, c.get("user").id, limit);
+    return c.json({ users: suggestions });
   });
 
   /** GET /users/:username → perfil con contadores + isFollowing */

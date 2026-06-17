@@ -1,5 +1,5 @@
 import type { PublicUser, TweetPage, UserProfile, UserSearchResult } from "@pulse/shared";
-import { and, eq, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { toPublicUser } from "../auth/service";
 import type { Database } from "../db";
 import { follows, tweets, users, type User } from "../db/schema";
@@ -108,6 +108,66 @@ export async function getUserProfile(
     tweetsCount: Number(tweetsRow?.c ?? 0),
     isFollowing: Number(followRow?.c ?? 0) > 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Sugerencias de a quién seguir
+// ---------------------------------------------------------------------------
+
+/**
+ * Devuelve hasta `limit` usuarios que el viewer todavía NO sigue (y que no son
+ * el viewer mismo), ordenados por cantidad de followers DESC y luego por
+ * `createdAt DESC` como desempate. `isFollowing` siempre es false aquí (por
+ * definición: solo se muestran los que el viewer no sigue).
+ */
+export async function getUserSuggestions(
+  db: Database,
+  viewerId: string,
+  limit?: number,
+): Promise<UserSearchResult[]> {
+  const lim = Math.min(Math.max(limit ?? 5, 1), 20);
+
+  // IDs de los usuarios que el viewer ya sigue.
+  const followedRows = await db
+    .select({ followingId: follows.followingId })
+    .from(follows)
+    .where(eq(follows.followerId, viewerId));
+
+  const followedIds = followedRows.map((r) => r.followingId);
+
+  // Excluir al viewer y a los ya seguidos.
+  const excludeClause =
+    followedIds.length > 0
+      ? and(ne(users.id, viewerId), notInArray(users.id, followedIds))
+      : ne(users.id, viewerId);
+
+  const rows = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      name: users.name,
+      bio: users.bio,
+      avatarUrl: users.avatarUrl,
+      createdAt: users.createdAt,
+      followersCount: sql<number>`(select count(*)::int from ${follows} where ${follows.followingId} = ${users.id})`,
+    })
+    .from(users)
+    .where(excludeClause)
+    .orderBy(
+      sql`(select count(*)::int from ${follows} where ${follows.followingId} = ${users.id}) desc`,
+      sql`${users.createdAt} desc`,
+    )
+    .limit(lim);
+
+  return rows.map((row) => ({
+    id: row.id,
+    username: row.username,
+    name: row.name,
+    bio: row.bio,
+    avatarUrl: row.avatarUrl,
+    createdAt: row.createdAt.toISOString(),
+    isFollowing: false,
+  }));
 }
 
 // ---------------------------------------------------------------------------
