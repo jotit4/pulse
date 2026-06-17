@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import type { PublicUser } from "@pulse/shared";
 import { UserAvatar } from "./UserAvatar";
@@ -6,29 +7,35 @@ import { useAuth } from "@/auth/useAuth";
 import { useFollow } from "@/hooks/useFollow";
 
 interface UserCardProps {
-  user: PublicUser;
+  user: PublicUser & { isFollowing?: boolean };
 }
 
 /**
  * Tarjeta de usuario con avatar, nombre, username, bio y botón de seguir.
  * El botón de seguir se muestra solo si el usuario no es el autenticado.
+ * Si `user.isFollowing` viene del servidor (ej: resultado de búsqueda),
+ * se usa como estado inicial real; de lo contrario arranca en false.
  */
 export function UserCard({ user }: UserCardProps) {
   const { user: currentUser } = useAuth();
   const { follow, unfollow, isPending } = useFollow(user.username);
 
-  // La tarjeta no expone isFollowing directamente (solo PublicUser).
-  // Para mostrar el estado real habría que consultar el perfil, pero aquí
-  // renderizamos el estado local del botón solo si hay una mutación pendiente.
-  // En listados simples, mostramos siempre "Seguir" hasta que se navega al perfil.
+  // Estado local que refleja si el viewer sigue a este usuario.
+  // Se inicializa con el valor del servidor (isFollowing) si está disponible.
+  const [siguiendo, setSiguiendo] = useState<boolean>(user.isFollowing ?? false);
+
   const esMiPerfil = currentUser?.username === user.username;
 
   function handleFollow() {
-    follow.mutate();
+    follow.mutate(undefined, {
+      onSuccess: () => setSiguiendo(true),
+    });
   }
 
   function handleUnfollow() {
-    unfollow.mutate();
+    unfollow.mutate(undefined, {
+      onSuccess: () => setSiguiendo(false),
+    });
   }
 
   return (
@@ -49,7 +56,7 @@ export function UserCard({ user }: UserCardProps) {
           {/* Botón de seguir/dejar de seguir, solo si no es el perfil propio */}
           {!esMiPerfil && (
             <div className="shrink-0">
-              {follow.isSuccess ? (
+              {siguiendo ? (
                 <Button
                   variant="secondary"
                   onClick={handleUnfollow}
@@ -72,9 +79,7 @@ export function UserCard({ user }: UserCardProps) {
           )}
         </div>
 
-        {user.bio && (
-          <p className="mt-1 text-sm text-gray-600 line-clamp-2">{user.bio}</p>
-        )}
+        {user.bio && <p className="mt-1 text-sm text-gray-600 line-clamp-2">{user.bio}</p>}
       </div>
     </div>
   );

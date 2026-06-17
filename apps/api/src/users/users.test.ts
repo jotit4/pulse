@@ -1,4 +1,10 @@
-import type { PublicUser, TweetPage, TweetView, UserProfile } from "@pulse/shared";
+import type {
+  PublicUser,
+  TweetPage,
+  TweetView,
+  UserProfile,
+  UserSearchResult,
+} from "@pulse/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestApp, registerAndAuth, type TestApp } from "../../test/helpers/app";
 
@@ -9,7 +15,7 @@ const jsonHeaders = { "content-type": "application/json" };
 // ---------------------------------------------------------------------------
 
 interface UsersBody {
-  users: PublicUser[];
+  users: UserSearchResult[];
 }
 
 interface ProfileBody {
@@ -60,8 +66,9 @@ describe("GET /users/search", () => {
   }
 
   it("encuentra por coincidencia parcial en username", async () => {
-    const body = await search("ali");
-    expect(body.users.map((u) => u.username)).toEqual(["alice"]);
+    // Alice busca "bob": el viewer (alice) no aparece en sus propios resultados
+    const body = await search("bob");
+    expect(body.users.map((u) => u.username)).toContain("bob");
   });
 
   it("encuentra por coincidencia parcial en name (case-insensitive)", async () => {
@@ -93,7 +100,8 @@ describe("GET /users/search", () => {
   });
 
   it("no expone campos sensibles (sin email ni passwordHash)", async () => {
-    const body = await search("alice");
+    // Alice busca "bob" (alice no aparece en sus propios resultados)
+    const body = await search("bob");
     const user = body.users[0]! as unknown as Record<string, unknown>;
     expect(user.email).toBeUndefined();
     expect(user.passwordHash).toBeUndefined();
@@ -110,6 +118,33 @@ describe("GET /users/search", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as UsersBody;
     expect(body.users).toEqual([]);
+  });
+
+  it("devuelve isFollowing=true para un usuario que el viewer sigue", async () => {
+    // Alice sigue a bob
+    await ctx.app.request("/users/bob/follow", {
+      method: "POST",
+      headers: { cookie },
+    });
+
+    const body = await search("bob");
+    const bob = body.users.find((u) => u.username === "bob");
+    expect(bob).toBeDefined();
+    expect(bob!.isFollowing).toBe(true);
+  });
+
+  it("devuelve isFollowing=false para un usuario que el viewer no sigue", async () => {
+    const body = await search("bob");
+    const bob = body.users.find((u) => u.username === "bob");
+    expect(bob).toBeDefined();
+    expect(bob!.isFollowing).toBe(false);
+  });
+
+  it("el viewer no aparece en sus propios resultados de búsqueda", async () => {
+    // Alice busca "alice" — su propio perfil no debe aparecer
+    const body = await search("alice");
+    const self = body.users.find((u) => u.username === "alice");
+    expect(self).toBeUndefined();
   });
 });
 

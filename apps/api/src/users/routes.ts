@@ -23,7 +23,7 @@ export function createUserRoutes({ db, config }: AppDeps) {
     const q = c.req.query("q") ?? "";
     const limitRaw = c.req.query("limit");
     const limit = limitRaw ? parseInt(limitRaw, 10) : undefined;
-    const result = await searchUsers(db, q, limit);
+    const result = await searchUsers(db, q, c.get("user").id, limit);
     return c.json({ users: result });
   });
 

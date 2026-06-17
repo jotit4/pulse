@@ -1,5 +1,5 @@
-import type { PublicUser, TweetPage, UserProfile } from "@pulse/shared";
-import { and, eq, ilike, lt, or, sql } from "drizzle-orm";
+import type { PublicUser, TweetPage, UserProfile, UserSearchResult } from "@pulse/shared";
+import { and, eq, ilike, lt, ne, or, sql } from "drizzle-orm";
 import { toPublicUser } from "../auth/service";
 import type { Database } from "../db";
 import { follows, tweets, users, type User } from "../db/schema";
@@ -30,8 +30,15 @@ async function resolveUsername(db: Database, username: string): Promise<User> {
  * Busca usuarios cuyo `username` o `name` contengan `q` (case-insensitive).
  * Devuelve `[]` para una consulta vacía. Escapamos los comodines de LIKE para
  * que el texto del usuario se trate como literal y no inyecte patrones.
+ * El viewer nunca aparece en sus propios resultados (el backend rechaza el
+ * auto-follow). Para cada resultado, incluye `isFollowing` real.
  */
-export async function searchUsers(db: Database, q: string, limit?: number): Promise<PublicUser[]> {
+export async function searchUsers(
+  db: Database,
+  q: string,
+  viewerId: string,
+  limit?: number,
+): Promise<UserSearchResult[]> {
   const term = q.trim();
   if (!term) return [];
 
@@ -42,11 +49,31 @@ export async function searchUsers(db: Database, q: string, limit?: number): Prom
   const rows = await db
     .select()
     .from(users)
-    .where(or(ilike(users.username, pattern), ilike(users.name, pattern)))
+    .where(
+      and(ne(users.id, viewerId), or(ilike(users.username, pattern), ilike(users.name, pattern))),
+    )
     .orderBy(users.username)
     .limit(lim);
 
-  return rows.map(toPublicUser);
+  if (rows.length === 0) return [];
+
+  // Verificar en paralelo qué usuarios sigue el viewer
+  const followChecks = await Promise.all(
+    rows.map((target) =>
+      db
+        .select({ c: sql<number>`count(*)::int` })
+        .from(follows)
+        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, target.id)))
+        .then(([row]) => ({ id: target.id, isFollowing: Number(row?.c ?? 0) > 0 })),
+    ),
+  );
+
+  const followMap = new Map(followChecks.map(({ id, isFollowing }) => [id, isFollowing]));
+
+  return rows.map((row) => ({
+    ...toPublicUser(row),
+    isFollowing: followMap.get(row.id) ?? false,
+  }));
 }
 
 // ---------------------------------------------------------------------------

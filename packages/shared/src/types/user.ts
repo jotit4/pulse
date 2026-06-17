@@ -16,3 +16,9 @@ export interface UserProfile extends PublicUser {
   /** Si el usuario autenticado sigue a este usuario. */
   isFollowing: boolean;
 }
+
+/** Resultado de búsqueda de usuario: incluye el estado real de follow del viewer. */
+export interface UserSearchResult extends PublicUser {
+  /** Si el usuario autenticado sigue a este usuario. */
+  isFollowing: boolean;
+}

@@ -1,6 +1,7 @@
 import type {
   PublicUser,
   UserProfile,
+  UserSearchResult,
   TweetView,
   TweetPage,
   RegisterInput,
@@ -119,7 +120,7 @@ export const usersApi = {
   search: (q: string, limit?: number) => {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.set("limit", String(limit));
-    return req<{ users: PublicUser[] }>("GET", `/users/search?${params.toString()}`);
+    return req<{ users: UserSearchResult[] }>("GET", `/users/search?${params.toString()}`);
   },
 
   profile: (username: string) => req<{ user: UserProfile }>("GET", `/users/${username}`),

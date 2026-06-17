@@ -194,10 +194,7 @@ describe("ProfilePage — follow (integración)", () => {
         },
         (url, init) => {
           // POST /users/bob/follow
-          if (
-            url.includes("/users/bob/follow") &&
-            (init?.method ?? "GET") === "POST"
-          ) {
+          if (url.includes("/users/bob/follow") && (init?.method ?? "GET") === "POST") {
             return mockResponse({ following: true, followersCount: 6 });
           }
           return null;
