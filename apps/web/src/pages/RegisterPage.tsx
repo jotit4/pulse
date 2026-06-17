@@ -9,7 +9,7 @@ import { registerSchema } from "@pulse/shared";
 
 type FieldErrors = Partial<Record<"username" | "name" | "email" | "password", string>>;
 
-/** Página de registro de nuevo usuario. */
+/** Pagina de registro de nuevo usuario. */
 export function RegisterPage() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
@@ -22,7 +22,6 @@ export function RegisterPage() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Si ya hay sesión activa, redirigir a home
   if (user) {
     return <Navigate to="/" replace />;
   }
@@ -73,11 +72,30 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm space-y-6 rounded-xl bg-white p-8 shadow-sm">
+    <div
+      className="flex min-h-screen items-center justify-center px-4 py-8"
+      style={{ backgroundColor: "var(--color-x-bg)" }}
+    >
+      <div
+        className="w-full max-w-sm space-y-6 rounded-2xl p-8"
+        style={{
+          backgroundColor: "var(--color-x-surface-2)",
+          border: "1px solid var(--color-x-border)",
+        }}
+      >
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Crear cuenta</h1>
-          <p className="mt-1 text-sm text-gray-500">Únete a Pulse hoy</p>
+          <div
+            className="mx-auto mb-4 text-3xl font-black"
+            style={{ color: "var(--color-x-brand)" }}
+          >
+            Pulse
+          </div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--color-x-text)" }}>
+            Crear cuenta
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--color-x-muted)" }}>
+            Únete a Pulse hoy
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -129,7 +147,6 @@ export function RegisterPage() {
             disabled={isSubmitting}
           />
 
-          {/* Error global de la API (ej: username/email ya en uso) */}
           <ErrorMessage message={apiError} />
 
           <Button type="submit" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>
@@ -137,9 +154,13 @@ export function RegisterPage() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm" style={{ color: "var(--color-x-muted)" }}>
           ¿Ya tenés cuenta?{" "}
-          <Link to="/login" className="font-medium text-brand hover:underline">
+          <Link
+            to="/login"
+            className="font-bold hover:underline"
+            style={{ color: "var(--color-x-brand)" }}
+          >
             Iniciá sesión
           </Link>
         </p>

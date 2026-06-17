@@ -21,7 +21,6 @@ export function TweetList({
 }: TweetListProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // IntersectionObserver que carga la siguiente página al llegar al final
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -44,7 +43,7 @@ export function TweetList({
 
   if (tweets.length === 0 && !hasNextPage) {
     return (
-      <div className="px-4 py-12 text-center text-gray-500 text-sm">
+      <div className="px-4 py-12 text-center text-sm" style={{ color: "var(--color-x-muted)" }}>
         <p>No hay tweets todavía.</p>
         <p className="mt-1">¡Sé el primero en publicar algo!</p>
       </div>
@@ -57,19 +56,18 @@ export function TweetList({
         <TweetCard key={tweet.id} tweet={tweet} />
       ))}
 
-      {/* Sentinel para el infinite scroll */}
       <div ref={sentinelRef} className="h-4" aria-hidden="true" />
 
-      {/* Spinner de carga de siguiente página */}
       {isFetchingNextPage && (
         <div className="flex justify-center py-4">
           <Spinner className="h-6 w-6" />
         </div>
       )}
 
-      {/* Mensaje final cuando no hay más */}
       {!hasNextPage && tweets.length > 0 && (
-        <p className="py-6 text-center text-sm text-gray-400">Ya viste todo por ahora.</p>
+        <p className="py-6 text-center text-sm" style={{ color: "var(--color-x-muted)" }}>
+          Ya viste todo por ahora.
+        </p>
       )}
     </div>
   );

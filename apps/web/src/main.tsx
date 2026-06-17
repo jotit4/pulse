@@ -5,6 +5,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
 import "./index.css";
 
+// Aplicar el tema antes del primer render para evitar flash.
+(function initTheme() {
+  try {
+    const stored = localStorage.getItem("pulse-theme");
+    if (stored === "light") {
+      document.documentElement.classList.add("light");
+    }
+    // Default: dark (sin clase = dark por los CSS vars de base)
+  } catch {
+    // localStorage no disponible
+  }
+})();
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

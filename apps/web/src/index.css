@@ -1,7 +1,82 @@
 @import "tailwindcss";
 
+/* ============================================================
+   PULSE — Design tokens (Twitter/X dark theme)
+   Tailwind v4: todos los tokens viven en @theme {}
+   ============================================================ */
+
 @theme {
+  /* Breakpoints */
   --breakpoint-sm: 640px;
   --breakpoint-lg: 1024px;
-  --color-brand: #1d9bf0;
+  --breakpoint-xl: 1280px;
+
+  /* Paleta X — dark */
+  --color-x-bg: #000000;
+  --color-x-surface: #16181c;
+  --color-x-surface-2: #202327;
+  --color-x-border: #2f3336;
+  --color-x-text: #e7e9ea;
+  --color-x-muted: #71767b;
+  --color-x-brand: #1d9bf0;
+  --color-x-brand-hover: #1a8cd8;
+  --color-x-like: #f91880;
+  --color-x-like-hover: #e7136e;
+  --color-x-danger: #ef4444;
+
+  /* Alias retrocompat. */
+  --color-brand: var(--color-x-brand);
+}
+
+/* ============================================================
+   Modo claro — override cuando html tiene class="light"
+   ============================================================ */
+.light {
+  --color-x-bg: #ffffff;
+  --color-x-surface: #f7f9f9;
+  --color-x-surface-2: #eff3f4;
+  --color-x-border: #eff3f4;
+  --color-x-text: #0f1419;
+  --color-x-muted: #536471;
+  --color-x-brand: #1d9bf0;
+  --color-x-brand-hover: #1a8cd8;
+}
+
+/* ============================================================
+   Base global
+   ============================================================ */
+html {
+  background-color: var(--color-x-bg);
+  color: var(--color-x-text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Transicion suave al cambiar de tema */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Scrollbar sutil */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-x-border);
+  border-radius: 9999px;
+}
+
+::placeholder {
+  color: var(--color-x-muted);
+  opacity: 1;
 }

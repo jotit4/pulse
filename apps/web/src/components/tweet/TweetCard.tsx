@@ -3,12 +3,13 @@ import type { TweetView } from "@pulse/shared";
 import { useAuth } from "@/auth/useAuth";
 import { useLike } from "@/hooks/useLike";
 import { useDeleteTweet } from "@/hooks/useDeleteTweet";
+import { UserAvatar } from "@/components/user/UserAvatar";
 
 interface TweetCardProps {
   tweet: TweetView;
 }
 
-/** Formatea una fecha ISO a texto relativo simple en español. */
+/** Formatea una fecha ISO a texto relativo simple en espanol. */
 function fechaRelativa(isoString: string): string {
   const ahora = Date.now();
   const fecha = new Date(isoString).getTime();
@@ -32,13 +33,12 @@ function fechaRelativa(isoString: string): string {
   });
 }
 
-/** Tarjeta de un tweet con autor, contenido, like y borrar. */
+/** Tarjeta de un tweet estilo X — avatar izquierda, acciones con hover de color. */
 export function TweetCard({ tweet }: TweetCardProps) {
   const { user } = useAuth();
   const { like, unlike } = useLike();
   const deleteMutation = useDeleteTweet();
 
-  // Fix #7: estado de confirmación inline para evitar window.confirm
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
 
   const esMio = user?.username === tweet.author.username;
@@ -56,11 +56,9 @@ export function TweetCard({ tweet }: TweetCardProps) {
   function handleDelete() {
     if (deleteMutation.isPending) return;
     if (!confirmandoBorrar) {
-      // Primera pulsación: pedir confirmación
       setConfirmandoBorrar(true);
       return;
     }
-    // Segunda pulsación: confirmar y borrar
     setConfirmandoBorrar(false);
     deleteMutation.mutate(tweet.id);
   }
@@ -70,59 +68,72 @@ export function TweetCard({ tweet }: TweetCardProps) {
   }
 
   return (
-    <article className="border-b border-gray-100 px-4 py-3 hover:bg-gray-50 transition-colors">
+    <article
+      className="px-4 py-3 transition-colors cursor-pointer"
+      style={{ borderBottom: "1px solid var(--color-x-border)" }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-x-surface)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.backgroundColor = "";
+      }}
+    >
       <div className="flex gap-3">
-        {/* Avatar */}
         <div className="flex-shrink-0">
-          {tweet.author.avatarUrl ? (
-            <img
-              src={tweet.author.avatarUrl}
-              alt={tweet.author.name}
-              className="h-10 w-10 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-white font-semibold text-sm">
-              {tweet.author.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <UserAvatar name={tweet.author.name} avatarUrl={tweet.author.avatarUrl} size="md" />
         </div>
 
-        {/* Contenido */}
         <div className="flex-1 min-w-0">
           {/* Encabezado */}
           <div className="flex items-center gap-1 flex-wrap">
-            <span className="font-semibold text-gray-900 text-sm">{tweet.author.name}</span>
-            <span className="text-gray-500 text-sm">@{tweet.author.username}</span>
-            <span className="text-gray-400 text-sm">·</span>
+            <span className="font-bold text-sm" style={{ color: "var(--color-x-text)" }}>
+              {tweet.author.name}
+            </span>
+            <span className="text-sm" style={{ color: "var(--color-x-muted)" }}>
+              @{tweet.author.username}
+            </span>
+            <span className="text-sm" style={{ color: "var(--color-x-muted)" }}>
+              ·
+            </span>
             <time
               dateTime={tweet.createdAt}
-              className="text-gray-400 text-sm"
+              className="text-sm"
+              style={{ color: "var(--color-x-muted)" }}
               title={new Date(tweet.createdAt).toLocaleString("es-AR")}
             >
               {fechaRelativa(tweet.createdAt)}
             </time>
           </div>
 
-          {/* Texto del tweet */}
-          <p className="mt-1 text-gray-900 text-sm whitespace-pre-wrap break-words">
+          {/* Texto */}
+          <p
+            className="mt-1 text-sm whitespace-pre-wrap break-words"
+            style={{ color: "var(--color-x-text)" }}
+          >
             {tweet.content}
           </p>
 
           {/* Acciones */}
-          <div className="mt-2 flex items-center gap-4">
-            {/* Botón like */}
+          <div className="mt-3 flex items-center gap-6">
+            {/* Like */}
             <button
               onClick={handleLike}
               disabled={isPendingLike}
               aria-label={tweet.likedByMe ? "Quitar like" : "Dar like"}
               aria-pressed={tweet.likedByMe}
-              className={`flex items-center gap-1 text-sm transition-colors disabled:opacity-60 ${
-                tweet.likedByMe
-                  ? "text-red-500 hover:text-red-600"
-                  : "text-gray-500 hover:text-red-500"
-              }`}
+              className="flex items-center gap-1.5 text-sm transition-colors disabled:opacity-60"
+              style={{
+                color: tweet.likedByMe ? "var(--color-x-like)" : "var(--color-x-muted)",
+              }}
+              onMouseEnter={(e) => {
+                if (!tweet.likedByMe)
+                  (e.currentTarget as HTMLElement).style.color = "var(--color-x-like)";
+              }}
+              onMouseLeave={(e) => {
+                if (!tweet.likedByMe)
+                  (e.currentTarget as HTMLElement).style.color = "var(--color-x-muted)";
+              }}
             >
-              {/* Corazón */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -141,23 +152,25 @@ export function TweetCard({ tweet }: TweetCardProps) {
               <span>{tweet.likesCount}</span>
             </button>
 
-            {/* Botón borrar (solo si es el autor) — Fix #7: confirmación inline */}
+            {/* Borrar (solo autor) */}
             {esMio &&
               (confirmandoBorrar ? (
-                <span className="flex items-center gap-1 text-sm">
+                <span className="flex items-center gap-1.5 text-sm">
                   <button
                     onClick={handleDelete}
                     disabled={deleteMutation.isPending}
                     aria-label="Confirmar borrado del tweet"
-                    className="text-red-600 font-medium hover:text-red-700 transition-colors disabled:opacity-60"
+                    className="font-medium transition-colors disabled:opacity-60"
+                    style={{ color: "var(--color-x-danger)" }}
                   >
                     Confirmar
                   </button>
-                  <span className="text-gray-400">·</span>
+                  <span style={{ color: "var(--color-x-muted)" }}>·</span>
                   <button
                     onClick={handleCancelarBorrar}
                     aria-label="Cancelar borrado del tweet"
-                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                    className="transition-colors"
+                    style={{ color: "var(--color-x-muted)" }}
                   >
                     Cancelar
                   </button>
@@ -167,7 +180,14 @@ export function TweetCard({ tweet }: TweetCardProps) {
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
                   aria-label="Borrar tweet"
-                  className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition-colors disabled:opacity-60"
+                  className="flex items-center gap-1.5 text-sm transition-colors disabled:opacity-60"
+                  style={{ color: "var(--color-x-muted)" }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--color-x-danger)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--color-x-muted)";
+                  }}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

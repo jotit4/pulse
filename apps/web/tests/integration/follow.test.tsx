@@ -115,9 +115,9 @@ describe("ProfilePage — follow (integración)", () => {
 
     renderProfilePage();
 
-    // Verificar que aparece el nombre y el username del perfil visitado
+    // Verificar que aparece el nombre del perfil visitado (aparece en el header sticky y en el cuerpo)
     await waitFor(() => {
-      expect(screen.getByText("Bob López")).toBeInTheDocument();
+      expect(screen.getAllByText("Bob López").length).toBeGreaterThanOrEqual(1);
     });
 
     await waitFor(() => {
