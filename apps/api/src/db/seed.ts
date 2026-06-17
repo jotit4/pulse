@@ -8,7 +8,7 @@
 
 import { hashPassword } from "../auth/password";
 import type { Database } from "./index";
-import { follows, likes, sessions, tweets, users } from "./schema";
+import { bookmarks, follows, likes, notifications, sessions, tweets, users } from "./schema";
 
 // ---------------------------------------------------------------------------
 // Datos de ejemplo
@@ -275,6 +275,255 @@ const LIKES_CONFIG: [number, number][] = [
   [11, 33],
 ];
 
+/**
+ * Replies: [autorIdx, parentTweetGlobalIdx, contenido]
+ *
+ * Índices globales de tweets originales (misma secuencia que tweetsInserted):
+ *   luna   0-2  | marcos  3-6  | sofia   7-9  | diego  10-13
+ *   valentina 14-16 | andres 17-19 | camila 20-22 | nicolas 23-26
+ *   isabella 27-29  | mateo  30-33 | renata 34-36 | emilio 37-40
+ */
+const REPLIES_CONFIG: [number, number, string][] = [
+  // --- Hilo 1: luna responde a marcos (tweet 3: índices parciales Postgres) ---
+  // Nivel 1: luna → marcos[0]
+  [
+    0,
+    3,
+    "Totalmente de acuerdo, Marcos. Los uso en la tabla de eventos y la diferencia es brutal.",
+  ],
+  // Nivel 2: marcos → la reply de luna (se resuelve después de insertar las replies)
+  // Nivel 3: diego → la reply de marcos (ídem)
+
+  // --- Hilo 2: sofia y valentina debaten el artículo de sofia (tweet 7) ---
+  [
+    4,
+    7,
+    "Artículo impresionante, Sofía. ¿Tenés algún dato sobre burbujas de filtro en redes profesionales?",
+  ],
+  [
+    2,
+    7,
+    "Gracias, Valentina! Sí, lo analizo en el apartado 3. Spoiler: LinkedIn no escapa al efecto.",
+  ],
+
+  // --- Hilo 3: replies al tweet de diego sobre LLMs (tweet 10) ---
+  [
+    1,
+    10,
+    "Completamente de acuerdo. La gente los usa como Google y después se queja de las alucinaciones.",
+  ],
+  [
+    2,
+    10,
+    "El pensamiento crítico tampoco viene de serie con un título universitario, lamentablemente.",
+  ],
+
+  // --- Hilo 4: camila pregunta a luna sobre el rediseño (tweet 0) ---
+  [
+    6,
+    0,
+    "¡Luna, el modo oscuro quedó espectacular! ¿Qué paleta usaste para los textos secundarios?",
+  ],
+  [
+    0,
+    0,
+    "Gracias, Camila 🙏 Usé #A8A8B3 para texto secundario y #E1E1E6 para el primario. Contraste 7:1.",
+  ],
+
+  // --- Hilo 5: mateo y nicolás hablan de infra (tweet 30: Kubernetes) ---
+  [
+    7,
+    30,
+    "La distinción es perfecta, Mateo. La gente se asusta con el 'mucho' cuando en realidad lo complejo es el modelo mental.",
+  ],
+  [9, 30, "Primer día con k8s: kubectl get pods. Segundo día: ¿qué es un CrashLoopBackOff? 😅"],
+
+  // --- Replies individuales a los tweets de luna_garcia para la demo ---
+  [1, 1, "El ratio 4.5:1 es el mínimo. Para texto pequeño el AA exige 7:1. Gran recordatorio."],
+  [
+    7,
+    2,
+    "Las microtransiciones en iOS 7 fueron un antes y un después. Cambiaron las expectativas del usuario para siempre.",
+  ],
+
+  // --- Replies individuales a tweets de marcos_dev para la demo ---
+  [
+    0,
+    5,
+    "Drizzle es el primer ORM que no me hace sentir que estoy luchando contra el tipado. Gracias por el tip.",
+  ],
+  [9, 6, "Hono + Bun acá. Rendimiento incluso mejor. Vale la pena el salto."],
+
+  // --- Replies a tweets de sofia_mm para la demo ---
+  [
+    4,
+    8,
+    "El periodismo de datos también tiene su narrativa. Los números sin historia no mueven a nadie.",
+  ],
+  [
+    3,
+    9,
+    "Esa respuesta de la IA sobre los sueños es de lo más honesto que le escuché decir a un modelo 😂",
+  ],
+];
+
+/**
+ * Notificaciones.
+ * [userId_idx, actorId_idx, type, tweetGlobalIdx | null, read]
+ * Tipos: "follow" | "like" | "reply"
+ * NUNCA actorId === userId.
+ */
+const NOTIFICATIONS_CONFIG: [
+  number,
+  number,
+  "follow" | "like" | "reply",
+  number | null,
+  boolean,
+][] = [
+  // ── Notificaciones para luna_garcia (idx 0) ──────────────────────────────
+  // follows recibidos
+  [0, 1, "follow", null, false], // marcos la siguió
+  [0, 2, "follow", null, false], // sofia la siguió
+  [0, 4, "follow", null, true], // valentina la siguió (leída)
+  [0, 5, "follow", null, false], // andres la siguió
+  [0, 6, "follow", null, true], // camila la siguió (leída)
+  [0, 8, "follow", null, false], // isabella la siguió
+  [0, 10, "follow", null, false], // renata la siguió
+  // likes recibidos (tweet 0: rediseño, tweet 1: tip accesibilidad)
+  [0, 1, "like", 0, true], // marcos likeó su tweet (leído)
+  [0, 5, "like", 0, false], // andres likeó su tweet
+  [0, 10, "like", 1, false], // renata likeó su tip
+  // replies recibidas (6 y 0 en la config de replies arriba → tweets 0 y 1)
+  [0, 6, "reply", 0, false], // camila respondió tweet 0
+  [0, 1, "reply", 1, false], // marcos respondió tweet 1
+
+  // ── Notificaciones para marcos_dev (idx 1) ───────────────────────────────
+  [1, 0, "follow", null, false], // luna lo siguió
+  [1, 3, "follow", null, false], // diego lo siguió
+  [1, 7, "follow", null, true], // nicolás lo siguió (leído)
+  [1, 9, "follow", null, false], // mateo lo siguió
+  // likes
+  [1, 0, "like", 3, false], // luna likeó índices parciales
+  [1, 3, "like", 3, false], // diego likeó índices parciales
+  [1, 7, "like", 3, true], // nicolás likeó índices parciales (leído)
+  [1, 0, "like", 4, false], // luna likeó N+1 query
+  // replies
+  [1, 0, "reply", 3, false], // luna respondió tweet 3 (índices parciales)
+  [1, 0, "reply", 5, false], // luna respondió tweet 5 (Drizzle ORM)
+  [1, 9, "reply", 6, false], // mateo respondió tweet 6 (Hono)
+
+  // ── Notificaciones para sofia_mm (idx 2) ─────────────────────────────────
+  [2, 0, "follow", null, false], // luna la siguió
+  [2, 4, "follow", null, false], // valentina la siguió
+  [2, 6, "follow", null, true], // camila la siguió (leído)
+  [2, 10, "follow", null, false], // renata la siguió
+  // likes
+  [2, 4, "like", 7, false], // valentina likeó su artículo
+  [2, 6, "like", 7, true], // camila likeó su artículo (leído)
+  // replies
+  [2, 4, "reply", 7, false], // valentina respondió tweet 7
+  [2, 1, "reply", 10, false], // marcos respondió tweet 10 (de diego, pero sofia también recibe del debate)
+  [2, 3, "reply", 9, false], // diego respondió tweet 9
+
+  // ── Notificaciones para otros usuarios (mezcla leídas/no leídas) ─────────
+  // diego (idx 3)
+  [3, 1, "follow", null, true],
+  [3, 7, "follow", null, false],
+  [3, 0, "like", 10, false],
+  [3, 1, "reply", 10, false],
+  [3, 2, "reply", 10, false],
+  // valentina (idx 4)
+  [4, 2, "follow", null, false],
+  [4, 8, "follow", null, true],
+  [4, 11, "follow", null, false],
+  [4, 2, "like", 14, false],
+  [4, 8, "like", 14, true],
+  [4, 2, "reply", 7, false],
+  // andres (idx 5)
+  [5, 6, "follow", null, true],
+  [5, 6, "like", 17, false],
+  [5, 6, "like", 18, false],
+  // camila (idx 6)
+  [6, 0, "follow", null, false],
+  [6, 5, "follow", null, true],
+  [6, 5, "like", 20, false],
+  [6, 0, "reply", 0, false],
+  // nicolás (idx 7)
+  [7, 1, "follow", null, true],
+  [7, 3, "follow", null, false],
+  [7, 9, "follow", null, false],
+  [7, 3, "like", 25, false],
+  [7, 9, "like", 24, true],
+  [7, 9, "reply", 30, false],
+  // isabella (idx 8)
+  [8, 0, "follow", null, false],
+  [8, 4, "follow", null, true],
+  [8, 10, "follow", null, false],
+  [8, 4, "like", 27, false],
+  [8, 10, "like", 28, false],
+  // mateo (idx 9)
+  [9, 1, "follow", null, false],
+  [9, 7, "follow", null, true],
+  [9, 7, "like", 30, false],
+  [9, 7, "reply", 30, false],
+  [9, 1, "reply", 6, false],
+  // renata (idx 10)
+  [10, 0, "follow", null, true],
+  [10, 2, "follow", null, false],
+  [10, 8, "follow", null, false],
+  [10, 8, "like", 34, false],
+  [10, 0, "like", 34, false],
+  // emilio (idx 11)
+  [11, 3, "follow", null, false],
+  [11, 4, "follow", null, true],
+  [11, 9, "follow", null, false],
+  [11, 4, "like", 37, false],
+  [11, 2, "like", 37, true],
+];
+
+/**
+ * Bookmarks: [userId_idx, tweetGlobalIdx]
+ */
+const BOOKMARKS_CONFIG: [number, number][] = [
+  // ── luna_garcia guarda tweets técnicos de marcos y nicolás ───────────────
+  [0, 3], // índices parciales Postgres (marcos)
+  [0, 5], // Drizzle ORM (marcos)
+  [0, 24], // SQL 50 años (nicolás)
+  [0, 32], // alertas accionables (mateo)
+
+  // ── marcos_dev guarda tweets de diseño y datos ───────────────────────────
+  [1, 0], // rediseño app (luna)
+  [1, 1], // tip accesibilidad WCAG (luna)
+  [1, 34], // UX sin investigación (renata)
+  [1, 23], // dbt + Snowflake (nicolás)
+
+  // ── sofia_mm guarda tweets de tecnología que puede citar ─────────────────
+  [2, 10], // LLMs no son oráculos (diego)
+  [2, 11], // open source (diego)
+  [2, 37], // fallo nº 3 (emilio)
+  [2, 24], // SQL subestimado (nicolás)
+
+  // ── otros usuarios ────────────────────────────────────────────────────────
+  [3, 0], // diego guarda rediseño luna
+  [3, 14], // diego guarda ronda seed valentina
+  [4, 7], // valentina guarda artículo sofia
+  [4, 15], // valentina guarda product-market fit
+  [5, 20], // andres guarda EP de camila
+  [5, 30], // andres guarda tweet kubernetes de mateo
+  [6, 1], // camila guarda tip accesibilidad
+  [6, 7], // camila guarda artículo sofia
+  [7, 4], // nicolás guarda tip N+1 marcos
+  [7, 30], // nicolás guarda kubernetes mateo
+  [8, 14], // isabella guarda ronda valentina
+  [8, 27], // isabella guarda roadmap Q3 (propio — misma tabla, válido como "guardar para revisar")
+  [9, 23], // mateo guarda dbt+Snowflake nicolás
+  [9, 3], // mateo guarda índices parciales marcos
+  [10, 27], // renata guarda roadmap Q3 isabella
+  [10, 1], // renata guarda tip accesibilidad luna
+  [11, 14], // emilio guarda ronda valentina
+  [11, 7], // emilio guarda artículo sofia
+];
+
 // ---------------------------------------------------------------------------
 // Función pura: seedDatabase
 // ---------------------------------------------------------------------------
@@ -287,6 +536,8 @@ const LIKES_CONFIG: [number, number][] = [
  */
 export async function seedDatabase(db: Database): Promise<void> {
   // 1. Borrar en orden de dependencias (hijos antes que padres)
+  await db.delete(notifications);
+  await db.delete(bookmarks);
   await db.delete(likes);
   await db.delete(follows);
   await db.delete(tweets);
@@ -310,7 +561,7 @@ export async function seedDatabase(db: Database): Promise<void> {
     )
     .returning();
 
-  // 4. Insertar tweets (aplanamos la estructura por usuario)
+  // 4. Insertar tweets originales (sin parentId)
   const allTweetValues: { authorId: string; content: string }[] = [];
   for (let i = 0; i < usersInserted.length; i++) {
     const autor = usersInserted[i]!;
@@ -320,6 +571,39 @@ export async function seedDatabase(db: Database): Promise<void> {
     }
   }
   const tweetsInserted = await db.insert(tweets).values(allTweetValues).returning();
+
+  // 4b. Insertar replies de primer nivel (referenciando tweets originales por índice global)
+  //     REPLIES_CONFIG[n] = [autorIdx, parentTweetGlobalIdx, contenido]
+  //     Los primeros 2 de la lista se usan como padres de hilos de nivel 2/3 → se insertan en orden.
+  const repliesL1Values = REPLIES_CONFIG.map(([autorIdx, parentGlobalIdx, content]) => ({
+    authorId: usersInserted[autorIdx]!.id,
+    content,
+    parentId: tweetsInserted[parentGlobalIdx]!.id,
+  }));
+  const repliesL1Inserted = await db.insert(tweets).values(repliesL1Values).returning();
+
+  // 4c. Hilos de 2º y 3er nivel:
+  //     - Hilo 1: marcos responde a la reply de luna (repliesL1Inserted[0])
+  //     - Hilo 1 nivel 3: diego responde a la reply de marcos
+  const replyL2Marcos = await db
+    .insert(tweets)
+    .values({
+      authorId: usersInserted[1]!.id, // marcos
+      content:
+        "¡Exacto, Luna! Y combinados con índices compuestos el ganador total. Benchmarkeé un 40% de mejora en la consulta de eventos.",
+      parentId: repliesL1Inserted[0]!.id,
+    })
+    .returning();
+
+  await db.insert(tweets).values({
+    authorId: usersInserted[3]!.id, // diego
+    content:
+      "Ese 40% es conservador. En lecturas analíticas con condición de rango llegué al 60%. Los índices parciales son magia negra bien aplicada.",
+    parentId: replyL2Marcos[0]!.id,
+  });
+
+  // Construimos el array completo de replies para referencias posteriores (notificaciones)
+  // repliesL1Inserted[0] = luna→marcos[3]  (usado en notificaciones como "reply" a tweet 3)
 
   // 5. Insertar follows
   const followValues = FOLLOWS_IDX.map(([followerIdx, followingIdx]) => ({
@@ -336,6 +620,28 @@ export async function seedDatabase(db: Database): Promise<void> {
     return [{ userId: user.id, tweetId: tweet.id }];
   });
   await db.insert(likes).values(likeValues);
+
+  // 7. Insertar bookmarks
+  const bookmarkValues = BOOKMARKS_CONFIG.flatMap(([userIdx, tweetIdx]) => {
+    const user = usersInserted[userIdx];
+    const tweet = tweetsInserted[tweetIdx];
+    if (!user || !tweet) return [];
+    return [{ userId: user.id, tweetId: tweet.id }];
+  });
+  await db.insert(bookmarks).values(bookmarkValues);
+
+  // 8. Insertar notificaciones
+  //    NOTIFICATIONS_CONFIG: [userId_idx, actorId_idx, type, tweetGlobalIdx | null, read]
+  const notificationValues = NOTIFICATIONS_CONFIG.flatMap(
+    ([userIdx, actorIdx, type, tweetGlobalIdx, read]) => {
+      const user = usersInserted[userIdx];
+      const actor = usersInserted[actorIdx];
+      if (!user || !actor) return [];
+      const tweetId = tweetGlobalIdx !== null ? (tweetsInserted[tweetGlobalIdx]?.id ?? null) : null;
+      return [{ userId: user.id, actorId: actor.id, type, tweetId, read }];
+    },
+  );
+  await db.insert(notifications).values(notificationValues);
 }
 
 // ---------------------------------------------------------------------------
@@ -357,10 +663,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await close();
 
   console.log("✅ Seed completado");
-  console.log(`   Usuarios insertados : ${USUARIOS.length}`);
-  console.log(`   Tweets insertados   : ${TWEETS_POR_USUARIO.flat().length}`);
-  console.log(`   Follows insertados  : ${FOLLOWS_IDX.length}`);
-  console.log(`   Likes insertados    : ${LIKES_CONFIG.length}`);
+  console.log(`   Usuarios insertados      : ${USUARIOS.length}`);
+  console.log(`   Tweets originales        : ${TWEETS_POR_USUARIO.flat().length}`);
+  console.log(`   Replies insertadas       : ${REPLIES_CONFIG.length + 2}`); // +2 hilos L2/L3
+  console.log(`   Follows insertados       : ${FOLLOWS_IDX.length}`);
+  console.log(`   Likes insertados         : ${LIKES_CONFIG.length}`);
+  console.log(`   Bookmarks insertados     : ${BOOKMARKS_CONFIG.length}`);
+  console.log(`   Notificaciones insertadas: ${NOTIFICATIONS_CONFIG.length}`);
   console.log("");
   console.log("Credenciales de ejemplo (todos los usuarios comparten el mismo password):");
   console.log(`   Password: ${PASSWORD_EJEMPLO}`);
