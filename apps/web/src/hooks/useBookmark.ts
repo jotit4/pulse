@@ -1,28 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookmarksApi } from "@/api/client";
-import type { InfiniteData } from "@tanstack/react-query";
-import type { TweetPage, TweetView } from "@pulse/shared";
+import { patchTweetEverywhere, invalidateTweetQueries } from "./tweetCache";
 
-type TweetCache = InfiniteData<TweetPage>;
-
-function updateBookmarkInCache(
-  data: TweetCache | undefined,
-  tweetId: string,
-  bookmarkedByMe: boolean,
-): TweetCache | undefined {
-  if (!data) return data;
-  return {
-    ...data,
-    pages: data.pages.map((page) => ({
-      ...page,
-      tweets: page.tweets.map((t): TweetView =>
-        t.id === tweetId ? { ...t, bookmarkedByMe } : t
-      ),
-    })),
-  };
-}
-
-/** Hook para añadir/quitar bookmark con actualización optimista. */
+/** Hook para añadir/quitar bookmark con actualización optimista en toda la caché. */
 export function useBookmark(tweetId: string) {
   const queryClient = useQueryClient();
 
@@ -35,36 +15,15 @@ export function useBookmark(tweetId: string) {
       }
     },
     onMutate: async (currentlyBookmarked) => {
-      // Cancelar queries en vuelo
-      await queryClient.cancelQueries({ queryKey: ["timeline"] });
-      await queryClient.cancelQueries({ queryKey: ["explore"] });
-      await queryClient.cancelQueries({ queryKey: ["bookmarks"] });
-
-      const newValue = !currentlyBookmarked;
-
-      // Actualizar optimistamente en todas las cachés relevantes
-      const prevTimeline = queryClient.getQueryData<TweetCache>(["timeline"]);
-      const prevExplore = queryClient.getQueryData<TweetCache>(["explore"]);
-      const prevBookmarks = queryClient.getQueryData<TweetCache>(["bookmarks"]);
-
-      queryClient.setQueryData<TweetCache>(["timeline"], (old) =>
-        updateBookmarkInCache(old, tweetId, newValue)
-      );
-      queryClient.setQueryData<TweetCache>(["explore"], (old) =>
-        updateBookmarkInCache(old, tweetId, newValue)
-      );
-      queryClient.setQueryData<TweetCache>(["bookmarks"], (old) =>
-        updateBookmarkInCache(old, tweetId, newValue)
-      );
-
-      return { prevTimeline, prevExplore, prevBookmarks };
+      patchTweetEverywhere(queryClient, tweetId, {
+        bookmarkedByMe: !currentlyBookmarked,
+      });
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prevTimeline) queryClient.setQueryData(["timeline"], ctx.prevTimeline);
-      if (ctx?.prevExplore) queryClient.setQueryData(["explore"], ctx.prevExplore);
-      if (ctx?.prevBookmarks) queryClient.setQueryData(["bookmarks"], ctx.prevBookmarks);
+    onError: () => {
+      invalidateTweetQueries(queryClient);
     },
     onSettled: async () => {
+      // La página de bookmarks siempre necesita un refetch para agregar/quitar el tweet
       await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
     },
   });
