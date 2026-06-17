@@ -22,9 +22,12 @@ import { test, expect } from "@playwright/test";
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Genera un sufijo único por corrida para evitar colisiones en la DB. */
+/**
+ * Sufijo único y CORTO por corrida (base36) para evitar colisiones en la DB
+ * sin exceder el límite de 20 caracteres del username (ver usernameSchema).
+ */
 function uniqueSuffix(): string {
-  return `${Date.now()}_${Math.floor(Math.random() * 10_000)}`;
+  return `${Date.now().toString(36)}${Math.floor(Math.random() * 36).toString(36)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -35,7 +38,7 @@ test("registro de usuario nuevo → home autenticada → logout → ruta protegi
   page,
 }) => {
   const suffix = uniqueSuffix();
-  const username = `testuser_${suffix}`;
+  const username = `tu_${suffix}`;
   const name = `Test User ${suffix}`;
   const email = `testuser_${suffix}@test.com`;
   const password = "Test1234!";
@@ -70,7 +73,11 @@ test("registro de usuario nuevo → home autenticada → logout → ruta protegi
   // El NavBar muestra "@username" en el sidebar de escritorio (sm:flex).
   // En el viewport de escritorio de Playwright (1280x720) el sidebar es visible.
   // NavBar.tsx línea 98: <p className="text-sm text-gray-500">@{user.username}</p>
-  await expect(page.getByText(`@${username}`)).toBeVisible();
+  // El handle también aparece en los tweets del timeline, así que acotamos la
+  // búsqueda al sidebar de navegación para evitar coincidencias múltiples.
+  await expect(
+    page.getByRole("complementary", { name: "Navegación principal" }).getByText(`@${username}`),
+  ).toBeVisible();
 
   // ── 5. Hacer logout ─────────────────────────────────────────────────────
   // NavBar.tsx línea 99: <Button variant="ghost" ...>Cerrar sesión</Button>
@@ -119,7 +126,11 @@ test("login con usuario del seed (luna_garcia) → home autenticada → logout",
 
   // ── 4. Verificar home autenticada ───────────────────────────────────────
   await expect(page).toHaveURL("http://localhost:5173/");
-  await expect(page.getByText("@luna_garcia")).toBeVisible();
+  // luna_garcia tiene tweets en el seed, por lo que su handle aparece varias
+  // veces; acotamos al sidebar de navegación para identificar la sesión activa.
+  await expect(
+    page.getByRole("complementary", { name: "Navegación principal" }).getByText("@luna_garcia"),
+  ).toBeVisible();
 
   // ── 5. Logout ───────────────────────────────────────────────────────────
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
