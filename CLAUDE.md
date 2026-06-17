@@ -13,7 +13,7 @@ git log --oneline                 # ver la historia del desarrollo
 ```
 
 - **Backend:** `apps/api` — Hono + Drizzle + PostgreSQL (PGlite en memoria para tests).
-- **Frontend:** `apps/web` — React + Vite + Tailwind v4 + TanStack Query _(pendiente)_.
+- **Frontend:** `apps/web` — React + Vite + Tailwind v4 + TanStack Query.
 - **Compartido:** `packages/shared` — schemas Zod + tipos (contrato API ↔ web).
 
 ## Convenciones NO NEGOCIABLES (el challenge evalúa el proceso)
@@ -44,10 +44,17 @@ git log --oneline                 # ver la historia del desarrollo
 
 ## Estado actual
 
-**Hecho (62 tests verdes):** scaffold monorepo · server Hono + healthcheck · schema
-Drizzle (users/sessions/tweets/follows/likes) + migraciones · `@pulse/shared` · auth
+**COMPLETO — entregable.** 137 tests backend (cobertura 93.85%) + 21 tests frontend de
+integración + 2 E2E Playwright (registro/login/logout). Cero fallos.
+
+Features implementadas: scaffold monorepo · server Hono + healthcheck · schema Drizzle
+(users/sessions/tweets/follows/likes) + migraciones · `@pulse/shared` · auth
 (registro/login/logout/me) · tweets CRUD · social (follows + likes + listados) ·
-timeline (cursor keyset).
+timeline (cursor keyset) · módulo users (búsqueda, perfil, tweets de usuario) · seed
+(12 usuarios con tweets, follows y likes cruzados) · frontend React completo (auth UI,
+timeline + infinite scroll, composer, perfil + follow/tabs, búsqueda) · SSE real-time
+(event-bus, Hono streaming, consumido por el cliente) · `docker-compose` (pg + api +
+web, un solo comando) · README/Runbook completo.
 
 ### Endpoints implementados
 
@@ -58,29 +65,18 @@ POST   /tweets             GET  /tweets/:id      DELETE /tweets/:id
 POST   /tweets/:id/like    DELETE /tweets/:id/like
 POST   /users/:username/follow      DELETE /users/:username/follow
 GET    /users/:username/followers   GET /users/:username/following
+GET    /users/search?q=&limit=
+GET    /users/:username
+GET    /users/:username/tweets?cursor=&limit=
 GET    /timeline?cursor=&limit=
+GET    /timeline/stream   (SSE)
 ```
 
-## Plan restante (en orden)
+## Estado: entregable
 
-1. **users**: `GET /users/search?q=&limit=` (ilike username/name) ·
-   `GET /users/:username` → `UserProfile` (counts + `isFollowing`) ·
-   `GET /users/:username/tweets?cursor=` (paginado). Tipos `UserProfile` ya en
-   `@pulse/shared`. Reutilizar `tweetViewSelect` + `encodeCursor`. Registrar `/search`
-   ANTES de `/:username`. Convive con las rutas social ya montadas en `/users/...`.
-2. **seed**: ≥10 usuarios con tweets, follows y likes cruzados; credenciales de ejemplo
-   documentadas. Levantar y ver contenido inmediato.
-3. **cobertura ≥85%** del backend (`vitest run --coverage`); cerrar gaps.
-4. **frontend** `apps/web`: Vite + React + Tailwind v4 (mobile-first, breakpoints
-   640/1024) + TanStack Query; auth UI + contexto de sesión + rutas protegidas;
-   timeline + infinite scroll; compose/delete tweet (≤280 con contador); perfil +
-   follow/like + followers/following; búsqueda. Tests de integración (login, crear
-   tweet, follow) + E2E de auth con Playwright.
-5. **bonus**: timeline en tiempo real vía SSE (Hono streaming) + `docker-compose`
-   (pg + api + web, un solo comando) que blinde el Runbook.
-6. **README/Runbook** completo: prerrequisitos, instalación, seed, dev, tests, `.env`
-   (ver `.env.example`), credenciales de ejemplo, decisiones técnicas (stack, timeline,
-   grafo de follows, auth, trade-offs) y herramientas de AI usadas.
+El proyecto está completo. No hay trabajo pendiente de implementación. Para levantar
+el stack completo en un comando ver el README (`docker compose up --build`) o el
+Runbook de desarrollo (`pnpm install && pnpm --filter @pulse/api dev`).
 
 ## Modo de trabajo
 
