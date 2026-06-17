@@ -154,6 +154,30 @@ export function UserIcon({ filled = false, width = 24, height = 24, className }:
   );
 }
 
+/** Icono chispa/estrella (Pulse AI) */
+export function SparkleIcon({ filled = false, width = 24, height = 24, className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={width}
+      height={height}
+      fill={filled ? "currentColor" : "none"}
+      stroke={filled ? "none" : "currentColor"}
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+    >
+      {filled ? (
+        <path d="M12 2a.75.75 0 0 1 .714.518l1.764 5.43a2.25 2.25 0 0 0 1.426 1.426l5.43 1.764a.75.75 0 0 1 0 1.424l-5.43 1.764a2.25 2.25 0 0 0-1.426 1.426l-1.764 5.43a.75.75 0 0 1-1.428 0l-1.764-5.43a2.25 2.25 0 0 0-1.426-1.426L2.144 12.9a.75.75 0 0 1 0-1.424l5.43-1.764A2.25 2.25 0 0 0 9 8.286L10.714 2.52A.75.75 0 0 1 12 2Z" />
+      ) : (
+        <path d="M12 3l1.68 5.17a2 2 0 0 0 1.27 1.27L20.17 11l-5.22 1.56a2 2 0 0 0-1.27 1.27L12 19l-1.68-5.17a2 2 0 0 0-1.27-1.27L3.83 11l5.22-1.56A2 2 0 0 0 10.32 8.17L12 3Z" />
+      )}
+    </svg>
+  );
+}
+
 /** Icono burbuja de mensaje (Respuestas) */
 export function MessageIcon({ filled = false, width = 24, height = 24, className }: IconProps) {
   return (

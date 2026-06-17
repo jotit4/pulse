@@ -9,9 +9,15 @@ export interface AuthConfig {
   sameSite: "Lax" | "Strict" | "None";
 }
 
+export interface GroqConfig {
+  apiKey: string | undefined;
+  model: string;
+}
+
 export interface AppConfig {
   webOrigin: string;
   auth: AuthConfig;
+  groq: GroqConfig;
 }
 
 /** Dependencias que se inyectan a la app (db + config) — facilita testear. */
@@ -28,6 +34,10 @@ export function configFromEnv(env: Env): AppConfig {
       sessionTtlDays: env.SESSION_TTL_DAYS,
       secureCookie: env.SECURE_COOKIE ?? env.NODE_ENV === "production",
       sameSite: "Lax",
+    },
+    groq: {
+      apiKey: env.GROQ_API_KEY,
+      model: env.GROQ_MODEL,
     },
   };
 }

@@ -198,3 +198,21 @@ export const notificationsApi = {
   unreadCount: () => req<{ count: number }>("GET", "/notifications/unread-count"),
   markRead: () => req<{ ok: boolean }>("POST", "/notifications/read"),
 };
+
+// ---------------------------------------------------------------------------
+// Chat IA (Pulse AI)
+// ---------------------------------------------------------------------------
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatReply {
+  reply: string;
+  configured?: boolean;
+}
+
+export const chatApi = {
+  send: (messages: ChatMessage[]) => req<ChatReply>("POST", "/chat", { messages }),
+};

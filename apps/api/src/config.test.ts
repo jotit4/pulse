@@ -10,6 +10,7 @@ describe("configFromEnv", () => {
     WEB_ORIGIN: "http://localhost:5173",
     SESSION_TTL_DAYS: 30,
     SESSION_COOKIE_NAME: "pulse_session",
+    GROQ_MODEL: "llama-3.3-70b-versatile",
   };
 
   it("mapea WEB_ORIGIN correctamente", () => {

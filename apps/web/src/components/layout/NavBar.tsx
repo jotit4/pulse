@@ -8,6 +8,7 @@ import {
   BellIcon,
   BookmarkIcon,
   UserIcon,
+  SparkleIcon,
 } from "@/components/icons/Icons";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 
@@ -22,6 +23,7 @@ const staticNavItems: NavItemDef[] = [
   { to: "/search", label: "Buscar", Icon: SearchIcon },
   { to: "/notifications", label: "Notificaciones", Icon: BellIcon },
   { to: "/bookmarks", label: "Bookmarks", Icon: BookmarkIcon },
+  { to: "/chat", label: "Pulse AI", Icon: SparkleIcon },
 ];
 
 const activeCls = "font-bold text-[var(--color-x-text)]";

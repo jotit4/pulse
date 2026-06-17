@@ -58,6 +58,9 @@ services:
       SECURE_COOKIE: "false"
       # Si SEED_ON_START=true el entrypoint ejecuta db:seed al arrancar
       SEED_ON_START: "true"
+      # Pulse AI — chatbot con Groq (opcional; vacío deshabilita la IA)
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-}
     ports:
       # Expone la API en el host para debugging directo (opcional en prod)
       - "3001:3001"

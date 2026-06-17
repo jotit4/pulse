@@ -20,6 +20,12 @@ const EnvSchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
+  // ── Groq AI (Pulse AI chatbot) ─────────────────────────────────────────────
+  // Clave de API de Groq. Opcional: sin ella el chatbot responde con un aviso.
+  // Obtené una gratis en https://console.groq.com
+  GROQ_API_KEY: z.string().min(1).optional(),
+  // Modelo a usar. Por defecto usa el modelo LLaMA 3.3 70B versátil de Groq.
+  GROQ_MODEL: z.string().min(1).default("llama-3.3-70b-versatile"),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

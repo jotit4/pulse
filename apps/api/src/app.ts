@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { createAuthRoutes } from "./auth/routes";
 import { createBookmarkRoutes, createTweetBookmarkRoutes } from "./bookmarks/routes";
+import { createChatRoutes } from "./chat/routes";
 import type { AppDeps } from "./config";
 import { createExploreRoutes } from "./explore/routes";
 import { HttpError } from "./http/errors";
@@ -46,6 +47,8 @@ export function createApp(deps: AppDeps) {
   app.route("/bookmarks", createBookmarkRoutes(deps));
   // Notificaciones
   app.route("/notifications", createNotificationRoutes(deps));
+  // Chat IA (Pulse AI)
+  app.route("/chat", createChatRoutes(deps));
 
   app.onError((err, c) => {
     if (err instanceof HttpError) {

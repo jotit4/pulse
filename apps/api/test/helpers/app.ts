@@ -11,6 +11,10 @@ export const TEST_CONFIG: AppConfig = {
     secureCookie: false,
     sameSite: "Lax",
   },
+  groq: {
+    apiKey: undefined,
+    model: "llama-3.3-70b-versatile",
+  },
 };
 
 export interface TestApp {
