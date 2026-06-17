@@ -4,6 +4,8 @@ import type { TestApp } from "../../test/helpers/app";
 import { registerAndAuth } from "../../test/helpers/app";
 import { follows } from "../db/schema";
 import { esTweetVisiblePara } from "./routes";
+import { tweetBus } from "../events/bus";
+import type { TweetView } from "@pulse/shared";
 import { and, eq } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -135,5 +137,68 @@ describe("GET /realtime/stream", () => {
     controller.abort();
     // Consumimos el body para que no quede pendiente.
     res.body?.cancel();
+  });
+
+  it("onTweet: un tweet visible se envía por el stream SSE", async () => {
+    // Registramos alice como viewer.
+    const { cookieHeader, body: aliceBody } = await registerAndAuth(ctx.app, {
+      username: "alice",
+      email: "alice@example.com",
+    });
+    const aliceId = aliceBody.user.id;
+
+    // Abrimos el stream SSE con alice.
+    const res = await ctx.app.request("/realtime/stream", {
+      headers: { cookie: cookieHeader },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toBeNull();
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+
+    // Leemos del stream en background; acumulamos texto hasta recibir datos.
+    let received = "";
+    const readChunks = async () => {
+      // Intentamos leer hasta 3 chunks o hasta timeout
+      for (let i = 0; i < 3; i++) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        received += decoder.decode(value, { stream: true });
+        if (received.includes("data:")) break;
+      }
+    };
+
+    // Publicamos un tweet en el bus (alice es la autora — visible para ella misma).
+    const fakeTweet: TweetView = {
+      id: crypto.randomUUID(),
+      content: "hola desde el bus",
+      author: { id: aliceId, username: "alice", name: "Alice", avatarUrl: null },
+      likesCount: 0,
+      likedByMe: false,
+      replyCount: 0,
+      bookmarkedByMe: false,
+      parentId: null,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Publicamos con un pequeño delay para que el stream ya esté suscrito.
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Publicar en el bus dispara onTweet para alice (autor == viewer).
+    tweetBus.publishTweet({ tweet: fakeTweet, authorId: aliceId });
+
+    // Leemos el resultado con timeout.
+    await Promise.race([
+      readChunks(),
+      new Promise<void>((r) => setTimeout(r, 1000)),
+    ]);
+
+    // El stream debe haber recibido el evento del tweet.
+    expect(received).toContain("data:");
+
+    // Liberamos el reader.
+    reader.cancel();
   });
 });
