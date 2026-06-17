@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import type { TweetPage, TweetView } from "@pulse/shared";
+import { tweetViewSchema } from "@pulse/shared";
 import { API_BASE } from "@/api/client";
 
 type TimelineData = InfiniteData<TweetPage, string | undefined>;
@@ -40,12 +41,19 @@ export function useRealtimeTimeline(): void {
     const source = new EventSource(`${API_BASE}/realtime/stream`, { withCredentials: true });
 
     source.onmessage = (event: MessageEvent<string>) => {
-      let tweet: TweetView;
+      let parsed: unknown;
       try {
-        tweet = JSON.parse(event.data) as TweetView;
+        parsed = JSON.parse(event.data);
       } catch {
         return;
       }
+
+      const result = tweetViewSchema.safeParse(parsed);
+      if (!result.success) {
+        return;
+      }
+
+      const tweet: TweetView = result.data;
       queryClient.setQueryData<TimelineData>(["timeline"], (prev) =>
         insertarTweetEnTimeline(prev, tweet),
       );

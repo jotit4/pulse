@@ -1,25 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearch } from "@/hooks/useSearch";
 import { UserCard } from "@/components/user/UserCard";
 import { Spinner } from "@/components/ui/Spinner";
 
-/** Página de búsqueda de usuarios con debounce de 350 ms. */
+/** Página de búsqueda de usuarios. El debounce de 350 ms vive en useSearch. */
 export function SearchPage() {
-  // Valor inmediato del input
   const [inputValue, setInputValue] = useState("");
-  // Valor debounced que se usa para la búsqueda
-  const [query, setQuery] = useState("");
 
-  // Debounce: espera 350 ms después de que el usuario deja de escribir
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setQuery(inputValue);
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [inputValue]);
-
-  const { data, isLoading } = useSearch(query);
+  const { data, isLoading } = useSearch(inputValue);
 
   return (
     <div>
@@ -40,22 +28,24 @@ export function SearchPage() {
 
       <div>
         {/* Mensaje de ayuda cuando la búsqueda es muy corta */}
-        {query.trim().length < 2 && (
+        {inputValue.trim().length < 2 && (
           <p className="px-4 py-8 text-center text-sm text-gray-500">
             Escribí al menos 2 caracteres para buscar.
           </p>
         )}
 
         {/* Spinner mientras busca */}
-        {query.trim().length >= 2 && isLoading && (
+        {inputValue.trim().length >= 2 && isLoading && (
           <div className="flex justify-center py-8">
             <Spinner />
           </div>
         )}
 
         {/* Sin resultados */}
-        {query.trim().length >= 2 && !isLoading && data?.users.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-gray-500">Sin resultados para {query}</p>
+        {inputValue.trim().length >= 2 && !isLoading && data?.users.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-gray-500">
+            Sin resultados para {inputValue}
+          </p>
         )}
 
         {/* Lista de usuarios encontrados */}

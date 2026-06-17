@@ -5,18 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/auth/AuthContext";
 import { LoginPage } from "@/pages/LoginPage";
-
-// -------------------------------------------------------------------
-// Helpers
-// -------------------------------------------------------------------
-
-/** Construye una respuesta fetch simulada. */
-function mockResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+import { mockResponse } from "../helpers/fetch-mock";
 
 /** Monta LoginPage con los providers necesarios y un MemoryRouter.
  *  La ruta "/" renderiza un div centinela para verificar navegación. */

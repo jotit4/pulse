@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/auth/AuthContext";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { mockResponse, buildFetchMock } from "../helpers/fetch-mock";
 
 // ---------------------------------------------------------------------------
 // Stub de IntersectionObserver (no existe en jsdom)
@@ -58,62 +59,8 @@ const mockProfileUserSiguiendo = {
   followersCount: 6,
 };
 
-/** Construye una respuesta fetch simulada. */
-function mockResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 /** Página vacía de tweets. */
 const emptyTweets = { tweets: [], nextCursor: null };
-
-// ---------------------------------------------------------------------------
-// Helper de mock por URL
-// ---------------------------------------------------------------------------
-
-/**
- * Crea un stub de fetch que despacha por URL.
- * Cada URL puede tener múltiples respuestas en cola; una vez consumidas
- * devuelve la última repetidamente (clonando para evitar "body already read").
- * Los patrones MÁS ESPECÍFICOS deben ir ANTES que los genéricos.
- */
-function buildFetchMock(
-  routes: Record<string, Response[]>,
-  extraHandler?: (url: string, init?: RequestInit) => Response | null,
-) {
-  const queues: Record<string, Response[]> = {};
-  for (const [url, responses] of Object.entries(routes)) {
-    queues[url] = [...responses];
-  }
-
-  return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input.toString();
-
-    // Buscar coincidencia en las colas registradas (orden de inserción)
-    for (const [pattern, queue] of Object.entries(queues)) {
-      if (url.includes(pattern)) {
-        // shift consume la respuesta de la cola; si solo queda una, la clonamos
-        // para que pueda leerse varias veces sin "body already read"
-        if (queue.length > 1) {
-          return Promise.resolve(queue.shift()!);
-        }
-        // Última respuesta: clonar para reutilización segura
-        return Promise.resolve(queue[0]!.clone());
-      }
-    }
-
-    // Handler extra para rutas que no están en el mapa principal
-    if (extraHandler) {
-      const result = extraHandler(url, init);
-      if (result) return Promise.resolve(result);
-    }
-
-    // Fallback: 404
-    return Promise.resolve(mockResponse({ error: "Not found" }, 404));
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Helper de render

@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/auth/AuthContext";
 import { HomePage } from "@/pages/HomePage";
+import { mockResponse, buildFetchMock } from "../helpers/fetch-mock";
 
 // ---------------------------------------------------------------------------
 // Stub de IntersectionObserver (no existe en jsdom)
@@ -48,59 +49,11 @@ const mockTweet = {
   likedByMe: false,
 };
 
-/** Construye una respuesta fetch simulada. */
-function mockResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 /** Página vacía de timeline. */
 const emptyTimeline = { tweets: [], nextCursor: null };
 
 /** Página de timeline con un tweet. */
 const timelineConTweet = { tweets: [mockTweet], nextCursor: null };
-
-// ---------------------------------------------------------------------------
-// Helper de mock por URL
-// ---------------------------------------------------------------------------
-
-/**
- * Crea un stub de fetch que despacha por URL.
- * Cada URL puede tener múltiples respuestas en cola; una vez consumidas
- * devuelve la última repetidamente.
- */
-function buildFetchMock(
-  routes: Record<string, Response[]>,
-  extraHandler?: (url: string, init?: RequestInit) => Response | null,
-) {
-  const queues: Record<string, Response[]> = {};
-  for (const [url, responses] of Object.entries(routes)) {
-    queues[url] = [...responses];
-  }
-
-  return vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input.toString();
-
-    // Buscar coincidencia en las colas registradas
-    for (const [pattern, queue] of Object.entries(queues)) {
-      if (url.includes(pattern)) {
-        const response = queue.length > 1 ? queue.shift()! : queue[0]!;
-        return Promise.resolve(response);
-      }
-    }
-
-    // Handler extra (POST /tweets, etc.)
-    if (extraHandler) {
-      const result = extraHandler(url, init);
-      if (result) return Promise.resolve(result);
-    }
-
-    // Fallback: 404
-    return Promise.resolve(mockResponse({ error: "Not found" }, 404));
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Helper de render
