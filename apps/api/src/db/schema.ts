@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -60,6 +62,7 @@ export const sessions = pgTable(
 /**
  * Tweets. El límite de 280 caracteres se valida en la API (Zod) y además se
  * refuerza con un CHECK en la base como última línea de defensa.
+ * `parentId` es nullable; cuando está presente, el tweet es una respuesta.
  */
 export const tweets = pgTable(
   "tweets",
@@ -69,6 +72,7 @@ export const tweets = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
+    parentId: uuid("parent_id").references((): any => tweets.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -76,6 +80,8 @@ export const tweets = pgTable(
     index("tweets_author_created_idx").on(t.authorId, t.createdAt),
     // Para el cursor keyset global (created_at, id).
     index("tweets_created_id_idx").on(t.createdAt, t.id),
+    // Para listar replies de un tweet padre.
+    index("tweets_parent_id_idx").on(t.parentId),
     check("tweets_content_len", sql`char_length(${t.content}) between 1 and 280`),
   ],
 );
@@ -120,6 +126,56 @@ export const likes = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.tweetId] }), index("likes_tweet_idx").on(t.tweetId)],
 );
 
+/**
+ * Bookmarks. Clave primaria compuesta (userId, tweetId).
+ * El índice por tweetId acelera el recuento de guardados.
+ */
+export const bookmarks = pgTable(
+  "bookmarks",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tweetId: uuid("tweet_id")
+      .notNull()
+      .references(() => tweets.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.tweetId] }),
+    index("bookmarks_tweet_idx").on(t.tweetId),
+  ],
+);
+
+/** Enum de tipo de notificación. */
+export const notificationTypeEnum = pgEnum("notification_type", ["follow", "like", "reply"]);
+
+/**
+ * Notificaciones. userId = destinatario, actorId = quien realizó la acción.
+ * Se indexa por (userId, createdAt) para listar eficientemente, y por
+ * (userId, read) para contar no leídas.
+ */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum("type").notNull(),
+    tweetId: uuid("tweet_id").references(() => tweets.id, { onDelete: "cascade" }),
+    read: boolean("read").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("notifications_user_created_idx").on(t.userId, t.createdAt),
+    index("notifications_user_read_idx").on(t.userId, t.read),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -127,3 +183,5 @@ export type Tweet = typeof tweets.$inferSelect;
 export type NewTweet = typeof tweets.$inferInsert;
 export type Follow = typeof follows.$inferSelect;
 export type Like = typeof likes.$inferSelect;
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;

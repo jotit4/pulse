@@ -5,6 +5,7 @@ import type { Database } from "../db";
 import { follows, likes, tweets, users } from "../db/schema";
 import { HttpError } from "../http/errors";
 import { toPublicUser } from "../auth/service";
+import { createNotification } from "../notifications/service";
 
 const uuidSchema = z.string().uuid();
 
@@ -26,7 +27,7 @@ export async function likeTweet(
   }
 
   const [tweet] = await db
-    .select({ id: tweets.id })
+    .select({ id: tweets.id, authorId: tweets.authorId })
     .from(tweets)
     .where(eq(tweets.id, tweetId))
     .limit(1);
@@ -40,6 +41,14 @@ export async function likeTweet(
     .from(likes)
     .where(eq(likes.tweetId, tweetId));
   const count = countRows[0]?.count ?? 0;
+
+  // Notificar al autor del tweet (best-effort, no auto-notificar)
+  await createNotification(db, {
+    userId: tweet.authorId,
+    actorId: userId,
+    type: "like",
+    tweetId,
+  });
 
   return { likesCount: Number(count), likedByMe: true };
 }
@@ -116,6 +125,14 @@ export async function followUser(
     .from(follows)
     .where(eq(follows.followingId, target.id));
   const count = countRows[0]?.count ?? 0;
+
+  // Notificar al usuario seguido (best-effort, no auto-notificar)
+  await createNotification(db, {
+    userId: target.id,
+    actorId: followerId,
+    type: "follow",
+    tweetId: null,
+  });
 
   return { following: true, followersCount: Number(count) };
 }

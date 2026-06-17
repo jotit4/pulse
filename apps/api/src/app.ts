@@ -3,11 +3,14 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { createAuthRoutes } from "./auth/routes";
+import { createBookmarkRoutes, createTweetBookmarkRoutes } from "./bookmarks/routes";
 import type { AppDeps } from "./config";
 import { createExploreRoutes } from "./explore/routes";
 import { HttpError } from "./http/errors";
 import type { AppEnv } from "./http/types";
+import { createNotificationRoutes } from "./notifications/routes";
 import { createRealtimeRoutes } from "./realtime/routes";
+import { createReplyRoutes } from "./replies/routes";
 import { health } from "./routes/health";
 import { createSocialRoutes } from "./social/routes";
 import { createTimelineRoutes } from "./timeline/routes";
@@ -30,11 +33,19 @@ export function createApp(deps: AppDeps) {
   app.route("/health", health);
   app.route("/auth", createAuthRoutes(deps));
   app.route("/tweets", createTweetRoutes(deps));
+  // Replies e hilos bajo /tweets
+  app.route("/tweets", createReplyRoutes(deps));
+  // Bookmark/unbookmark de tweets bajo /tweets
+  app.route("/tweets", createTweetBookmarkRoutes(deps));
   app.route("/timeline", createTimelineRoutes(deps));
   app.route("/explore", createExploreRoutes(deps));
   app.route("/users", createUserRoutes(deps));
   app.route("/", createSocialRoutes(deps));
   app.route("/realtime", createRealtimeRoutes(deps));
+  // Bookmarks del viewer
+  app.route("/bookmarks", createBookmarkRoutes(deps));
+  // Notificaciones
+  app.route("/notifications", createNotificationRoutes(deps));
 
   app.onError((err, c) => {
     if (err instanceof HttpError) {

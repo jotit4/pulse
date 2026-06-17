@@ -15,6 +15,12 @@ export interface TweetView {
   likesCount: number;
   /** Si el usuario autenticado ya likeó este tweet. */
   likedByMe: boolean;
+  /** Cantidad de respuestas directas (opcional para no romper consumidores existentes). */
+  replyCount?: number;
+  /** Si el usuario autenticado guardó este tweet en bookmarks (opcional). */
+  bookmarkedByMe?: boolean;
+  /** Id del tweet padre si es una respuesta (opcional). */
+  parentId?: string | null;
 }
 
 /** Página de tweets con cursor para infinite scroll. */
