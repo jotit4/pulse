@@ -1,11 +1,14 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { useSearch } from "@/hooks/useSearch";
 import { UserCard } from "@/components/user/UserCard";
 import { Spinner } from "@/components/ui/Spinner";
 
 /** Pagina de busqueda de usuarios. El debounce de 350 ms vive en useSearch. */
 export function SearchPage() {
-  const [inputValue, setInputValue] = useState("");
+  const [searchParams] = useSearchParams();
+  // Precarga el término si se llega desde la barra del sidebar (/search?q=...).
+  const [inputValue, setInputValue] = useState(searchParams.get("q") ?? "");
 
   const { data, isLoading } = useSearch(inputValue);
 

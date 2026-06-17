@@ -6,7 +6,7 @@ import { UserAvatar } from "@/components/user/UserAvatar";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/auth/useAuth";
 import { socialApi } from "@/api/client";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 // ---------------------------------------------------------------------------
 // SugerenciaItem — fila compacta para "A quién seguir"
@@ -150,6 +150,58 @@ function QuienSeguir() {
 }
 
 // ---------------------------------------------------------------------------
+// GlobalSearch — barra de búsqueda del sidebar (navega a /search?q=)
+// ---------------------------------------------------------------------------
+
+function GlobalSearch() {
+  const navigate = useNavigate();
+  const [q, setQ] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const query = q.trim();
+    if (query.length > 0) navigate(`/search?q=${encodeURIComponent(query)}`);
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-center gap-2 rounded-full px-4 py-2"
+      style={{ backgroundColor: "var(--color-x-surface-2)", border: "1px solid transparent" }}
+    >
+      <label htmlFor="buscar-pulse" className="sr-only">
+        Buscar en Pulse
+      </label>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        className="h-4 w-4 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden="true"
+        style={{ color: "var(--color-x-muted)" }}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+        />
+      </svg>
+      <input
+        id="buscar-pulse"
+        type="search"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Buscar en Pulse"
+        className="w-full bg-transparent text-sm outline-none"
+        style={{ color: "var(--color-x-text)" }}
+      />
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // RightAside — columna de widgets
 // ---------------------------------------------------------------------------
 
@@ -164,34 +216,8 @@ export function RightAside() {
       aria-label="Widgets"
       className="hidden lg:flex lg:flex-col lg:w-80 lg:flex-shrink-0 lg:px-4 lg:py-3 lg:gap-4"
     >
-      {/* Barra de búsqueda global (placeholder) */}
-      <div
-        className="flex items-center gap-2 rounded-full px-4 py-2"
-        style={{
-          backgroundColor: "var(--color-x-surface-2)",
-          border: "1px solid transparent",
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          className="h-4 w-4 flex-shrink-0"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden="true"
-          style={{ color: "var(--color-x-muted)" }}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-          />
-        </svg>
-        <span className="text-sm" style={{ color: "var(--color-x-muted)" }}>
-          Buscar en Pulse
-        </span>
-      </div>
+      {/* Barra de búsqueda global */}
+      <GlobalSearch />
 
       {/* Tendencias (placeholder) */}
       <div
