@@ -270,9 +270,23 @@ pnpm --filter @pulse/api test:coverage
 
 Los tests no necesitan PostgreSQL externo: usan **PGlite** (Postgres compilado a
 WebAssembly) en memoria. Cada suite crea su propia instancia aislada, lo que los
-hace deterministas e instantáneos. Hay más de 130 casos (cobertura 93 %) que
-cubren auth, tweets, social, timeline, usuarios, explore, replies, bookmarks,
-notificaciones, chat, realtime, seed, config y el event-bus.
+hace deterministas e instantáneos. Son **220 casos** con cobertura por encima del
+**85 % en todas las métricas** (statements/lines ~94 %, functions ~98 %, branches
+~86 %), que cubren auth, tweets, social, timeline, usuarios, explore, replies,
+bookmarks, notificaciones, chat, realtime, seed, config y el event-bus.
+
+### Frontend — integración (Vitest + Testing Library)
+
+Tests de integración de los flujos principales (login, crear tweet, follow,
+notificaciones, bookmarks, búsqueda y el modal de composición), que ejercitan el
+stack del cliente (contexto de sesión + TanStack Query + routing) interceptando
+`fetch` en vez de mockear módulos:
+
+```bash
+pnpm --filter @pulse/web test
+```
+
+Son **58 casos** de integración.
 
 ### Frontend — E2E con Playwright
 
