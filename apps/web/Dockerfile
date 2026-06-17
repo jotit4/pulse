@@ -23,7 +23,11 @@ COPY apps/web/package.json ./apps/web/
 # Instalar todas las dependencias (incluyendo devDependencies para el build de Vite)
 RUN pnpm install --frozen-lockfile
 
-# Copiar el código fuente del workspace necesario para el build
+# Copiar el código fuente del workspace necesario para el build.
+# tsconfig.base.json es imprescindible: apps/web/tsconfig.json lo hereda con
+# `extends: ../../tsconfig.base.json` (target, moduleResolution, skipLibCheck…).
+# Sin él, `tsc -b` cae a los defaults de TS y falla sobre los .d.ts de las deps.
+COPY tsconfig.base.json ./
 COPY packages/shared/ ./packages/shared/
 COPY apps/web/ ./apps/web/
 

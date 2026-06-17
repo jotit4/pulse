@@ -32,10 +32,12 @@ RUN groupadd --system pulse && useradd --system --gid pulse --no-create-home pul
 
 WORKDIR /app
 
-# Copiar node_modules y workspace ya instalados desde la etapa anterior
+# Copiar node_modules ya instalados desde la etapa anterior. Con pnpm, cada
+# workspace tiene su propio node_modules (symlinks al store de la raíz), por eso
+# se copian los tres niveles para preservar la resolución de módulos.
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules 2>/dev/null || true
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules 2>/dev/null || true
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 
 # Copiar código fuente del monorepo relevante para la API
 COPY packages/shared/ ./packages/shared/

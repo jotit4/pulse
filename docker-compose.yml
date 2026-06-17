@@ -62,8 +62,13 @@ services:
       # Expone la API en el host para debugging directo (opcional en prod)
       - "3001:3001"
     healthcheck:
-      # Verifica que la API responda en el endpoint /health ya implementado
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      # Verifica que la API responda en /health. node:22-slim no incluye wget ni
+      # curl, así que usamos node (fetch global) para no depender de binarios externos.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3001/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 6
