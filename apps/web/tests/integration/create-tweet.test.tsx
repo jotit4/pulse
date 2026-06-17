@@ -95,11 +95,12 @@ describe("HomePage — crear tweet (integración)", () => {
     vi.restoreAllMocks();
   });
 
-  it("renderiza el compositor y el timeline vacío", async () => {
+  it("renderiza el compositor y el tab por defecto (Para ti) vacío", async () => {
     vi.stubGlobal(
       "fetch",
       buildFetchMock({
         "/auth/me": [mockResponse({ user: mockUser })],
+        "/explore": [mockResponse(emptyTimeline)],
         "/timeline": [mockResponse(emptyTimeline)],
       }),
     );
@@ -111,7 +112,7 @@ describe("HomePage — crear tweet (integración)", () => {
       expect(screen.getByPlaceholderText("¿Qué estás pensando?")).toBeInTheDocument();
     });
 
-    // Timeline vacío: mensaje amable
+    // Feed vacío: mensaje amable
     await waitFor(() => {
       expect(screen.getByText("No hay tweets todavía.")).toBeInTheDocument();
     });
@@ -122,6 +123,7 @@ describe("HomePage — crear tweet (integración)", () => {
       "fetch",
       buildFetchMock({
         "/auth/me": [mockResponse({ user: mockUser })],
+        "/explore": [mockResponse(emptyTimeline)],
         "/timeline": [mockResponse(emptyTimeline)],
       }),
     );
@@ -147,6 +149,7 @@ describe("HomePage — crear tweet (integración)", () => {
       "fetch",
       buildFetchMock({
         "/auth/me": [mockResponse({ user: mockUser })],
+        "/explore": [mockResponse(emptyTimeline)],
         "/timeline": [mockResponse(emptyTimeline)],
       }),
     );
@@ -160,14 +163,15 @@ describe("HomePage — crear tweet (integración)", () => {
     expect(screen.getByRole("button", { name: "Publicar" })).toBeDisabled();
   });
 
-  it("caso éxito: crea un tweet y aparece en el timeline", async () => {
-    // El timeline tiene dos respuestas: primero vacío, luego con el tweet nuevo
+  it("caso éxito: crea un tweet y aparece en el feed", async () => {
+    // El feed explore tiene dos respuestas: primero vacío, luego con el tweet nuevo
     vi.stubGlobal(
       "fetch",
       buildFetchMock(
         {
           "/auth/me": [mockResponse({ user: mockUser })],
-          "/timeline": [mockResponse(emptyTimeline), mockResponse(timelineConTweet)],
+          "/explore": [mockResponse(emptyTimeline), mockResponse(timelineConTweet)],
+          "/timeline": [mockResponse(emptyTimeline)],
         },
         (url, init) => {
           // POST /tweets
@@ -219,6 +223,7 @@ describe("HomePage — crear tweet (integración)", () => {
       buildFetchMock(
         {
           "/auth/me": [mockResponse({ user: mockUser })],
+          "/explore": [mockResponse(emptyTimeline)],
           "/timeline": [mockResponse(emptyTimeline)],
         },
         (url, init) => {

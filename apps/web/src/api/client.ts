@@ -131,4 +131,23 @@ export const usersApi = {
     const qs = params.size > 0 ? `?${params.toString()}` : "";
     return req<TweetPage>("GET", `/users/${username}/tweets${qs}`);
   },
+
+  suggestions: (limit?: number) => {
+    const qs = limit !== undefined ? `?limit=${limit}` : "";
+    return req<{ users: UserSearchResult[] }>("GET", `/users/suggestions${qs}`);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Explore (feed global de tweets recientes)
+// ---------------------------------------------------------------------------
+
+export const exploreApi = {
+  feed: ({ cursor, limit }: { cursor?: string; limit?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (cursor) params.set("cursor", cursor);
+    if (limit !== undefined) params.set("limit", String(limit));
+    const qs = params.size > 0 ? `?${params.toString()}` : "";
+    return req<TweetPage>("GET", `/explore${qs}`);
+  },
 };

@@ -9,9 +9,10 @@ export function useCreateTweet() {
   return useMutation({
     mutationFn: (input: CreateTweetInput) => tweetsApi.create(input),
     onSuccess: async () => {
-      // Fix #2: invalidar tanto el timeline global como los tweets de cualquier perfil
+      // Invalidar timeline, feed explore y tweets de cualquier perfil
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["timeline"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore"] }),
         queryClient.invalidateQueries({
           predicate: (q) => q.queryKey[0] === "userTweets",
         }),
