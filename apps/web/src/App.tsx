@@ -7,6 +7,8 @@ import { RegisterPage } from "@/pages/RegisterPage";
 import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { NotificationsPage } from "@/pages/NotificationsPage";
+import { BookmarksPage } from "@/pages/BookmarksPage";
 
 export function App() {
   return (
@@ -21,6 +23,8 @@ export function App() {
           <Route element={<AppLayout />}>
             <Route index element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/:username" element={<ProfilePage />} />
           </Route>
         </Route>
